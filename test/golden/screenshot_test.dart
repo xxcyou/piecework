@@ -33,12 +33,11 @@ Future<void> _loadCjkFont() async {
     final f = File(path);
     if (!f.existsSync()) continue;
     final bytes = await f.readAsBytes();
-    // 同时注册成 Roboto（Material 默认）和 fallback，保证中文正常
-    for (final family in <String>['Roboto', 'DroidSans']) {
-      final loader = FontLoader(family)
-        ..addFont(Future<ByteData>.value(ByteData.view(bytes.buffer)));
-      await loader.load();
-    }
+    // 注意：Flutter 自带 Roboto（没有中文字形），注册成 'Roboto' 也覆盖不掉，
+    // 中文会变成方块。所以单独用 'DroidSans' 这个名字，并写进主题。
+    final loader = FontLoader('DroidSans')
+      ..addFont(Future<ByteData>.value(ByteData.view(bytes.buffer)));
+    await loader.load();
     return;
   }
   throw StateError('找不到中文字体，截图会出现方块');
@@ -152,6 +151,35 @@ class _OptionsStub extends OptionsNotifier {
       };
 }
 
+/// 把中文字体写进主题（含 fallback），否则截图里中文是方块
+///
+/// 注意：`AppBarTheme.titleTextStyle` 这类**显式 TextStyle** 不会继承
+/// DefaultTextStyle 的字体，得单独补 fontFamily，否则标题还是方块。
+ThemeData _themed(ThemeData base) {
+  const family = 'DroidSans';
+  const fallback = <String>[family];
+  TextStyle? fix(TextStyle? s) =>
+      s?.copyWith(fontFamily: family, fontFamilyFallback: fallback);
+
+  return base.copyWith(
+    textTheme:
+        base.textTheme.apply(fontFamily: family, fontFamilyFallback: fallback),
+    primaryTextTheme: base.primaryTextTheme.apply(
+      fontFamily: family,
+      fontFamilyFallback: fallback,
+    ),
+    appBarTheme: base.appBarTheme.copyWith(
+      titleTextStyle: fix(base.appBarTheme.titleTextStyle),
+    ),
+    navigationBarTheme: base.navigationBarTheme.copyWith(
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final base0 = base.navigationBarTheme.labelTextStyle?.resolve(states);
+        return fix(base0);
+      }),
+    ),
+  );
+}
+
 void main() {
   setUpAll(() async {
     await _loadCjkFont();
@@ -184,7 +212,7 @@ void main() {
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
+          theme: _themed(AppTheme.light()),
           locale: const Locale('zh', 'CN'),
           home: home,
         ),
