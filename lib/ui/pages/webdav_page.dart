@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
-import '../../data/services/auto_backup_service.dart';
 import '../../data/services/backup_service.dart';
 import '../../data/services/secure_backup_service.dart';
 import '../../data/services/webdav_service.dart';
@@ -58,12 +57,11 @@ class _WebDavPageState extends ConsumerState<WebDavPage> {
   }
 
   Future<void> _save() async {
-    await ref.read(settingsProvider.notifier).update((s) {
+    await ref.read(settingsProvider.notifier).mutate((s) {
       s.webdavUrl = _url.text.trim();
       s.webdavUser = _user.text.trim();
       s.webdavPass = _pass.text;
       s.webdavDir = _dir.text.trim().isEmpty ? '/piecework/' : _dir.text.trim();
-      return s;
     });
     ref.invalidate(webDavFilesProvider);
     _toast('已保存');
@@ -158,9 +156,8 @@ class _WebDavPageState extends ConsumerState<WebDavPage> {
             title: const Text('启用云备份'),
             subtitle: const Text('自动把加密备份传到你的网盘（同一份 AES-256 加密包）'),
             onChanged: (v) async {
-              await ref.read(settingsProvider.notifier).update((s) {
+              await ref.read(settingsProvider.notifier).mutate((s) {
                 s.webdavEnabled = v;
-                return s;
               });
               ref.invalidate(webDavFilesProvider);
             },
