@@ -17,7 +17,6 @@ FONT_CJK = '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf'
 FONT_LATIN = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
 FONT_LATIN_BOLD = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
 OUT = os.path.join(os.path.dirname(__file__), '..', 'docs', 'screenshots')
-PHOTO_DIR = os.path.join(os.path.dirname(__file__), 'fixtures', 'photos')
 
 W, H = 1080, 2160
 BG = (246, 247, 251)
@@ -154,17 +153,16 @@ def record_card(img, d, y, rec):
     box = (40, y, W - 40, y + h)
     shadow_card(img, box, blur=14, alpha=16)
     round_rect(d, box, 26, CARD)
-    # 缩略图
-    thumb = rec['thumb']
-    if thumb:
-        thumb = os.path.join(PHOTO_DIR, thumb)
-        t = Image.open(thumb).convert('RGB').resize((140, 140))
-        mask = Image.new('L', (140, 140), 0)
-        ImageDraw.Draw(mask).rounded_rectangle((0, 0, 140, 140), radius=20, fill=255)
-        img.paste(t, (66, y + 25), mask)
-    else:
-        round_rect(d, (66, y + 25, 206, y + 165), 20, (238, 241, 247))
-        text(d, (136, y + 95), '无图', 24, INK3, anchor='mm')
+    # 缩略图：统一用 App 的「无图」占位（不拿生成图冒充货物实拍）
+    round_rect(d, (66, y + 25, 206, y + 165), 20, (238, 241, 247))
+    # 简单的「图片」图标：圆角矩形 + 太阳 + 山
+    d.rounded_rectangle((96, y + 62, 176, y + 128), radius=8, outline=INK3, width=3)
+    d.ellipse((106, y + 72, 118, y + 84), outline=INK3, width=3)
+    d.line((100, y + 122, 128, y + 96), fill=INK3, width=3)
+    d.line((128, y + 96, 146, y + 114), fill=INK3, width=3)
+    d.line((146, y + 114, 160, y + 102), fill=INK3, width=3)
+    d.line((160, y + 102, 172, y + 122), fill=INK3, width=3)
+    text(d, (136, y + 136), '无图', 20, INK3, anchor='ma')
     # 型号 · 颜色 · 码数
     text(d, (232, y + 28), rec['title'], 32, INK, bold=True)
     text(d, (232, y + 82), rec['sub'], 24, INK2)
@@ -202,6 +200,8 @@ def fab_and_nav(img, d, active=0):
             for k in range(3):
                 d.line((cx - 16, cy - 12 + k * 12, cx + 16, cy - 12 + k * 12),
                        fill=color, width=3)
+                d.ellipse((cx - 19, cy - 15 + k * 12, cx - 13, cy - 9 + k * 12),
+                          fill=color)
         elif i == 1:
             d.line((cx - 18, cy + 10, cx - 6, cy - 4), fill=color, width=3)
             d.line((cx - 6, cy - 4, cx + 4, cy + 4), fill=color, width=3)
@@ -215,17 +215,17 @@ def fab_and_nav(img, d, active=0):
 
 
 RECORDS = [
-    dict(thumb='c_fake0.jpg', title='A1023 · 黑色 · M', sub='300 件 × ¥0.45',
+    dict(thumb=None, title='A1023 · 黑色 · M', sub='300 件 × ¥0.45',
          time='今天 18:30', qty='300 件', amount='¥135.00'),
-    dict(thumb='c_fake1.jpg', title='B2087 · 米白 · S', sub='180 件 × ¥0.62',
+    dict(thumb=None, title='B2087 · 米白 · S', sub='180 件 × ¥0.62',
          time='今天 13:10', qty='180 件', amount='¥111.60'),
-    dict(thumb='c_fake2.jpg', title='B2087 · 藏青 · M', sub='420 件 × ¥0.58',
+    dict(thumb=None, title='B2087 · 藏青 · M', sub='420 件 × ¥0.58',
          time='昨天 17:20', qty='420 件', amount='¥243.60'),
-    dict(thumb='c_fake4.jpg', title='C3311 · 灰色 · XL', sub='96 件 × ¥0.72',
+    dict(thumb=None, title='C3311 · 灰色 · XL', sub='96 件 × ¥0.72',
          time='昨天 12:05', qty='96 件', amount='¥69.12', tag='已上报'),
     dict(thumb=None, title='E7712 · 未填颜色', sub='340 件 · 未计价',
          time='11-14 09:40', qty='340 件', amount='未计价'),
-    dict(thumb='c_fake3.jpg', title='D5590 · 酒红 · L', sub='260 件 × ¥0.50',
+    dict(thumb=None, title='D5590 · 酒红 · L', sub='260 件 × ¥0.50',
          time='11-15 14:20', qty='260 件', amount='¥130.00'),
 ]
 

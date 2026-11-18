@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <sub>界面示意图（示例数据，由 <code>tool/make_screenshots.py</code> 脚本绘制；不是真机截图）</sub>
+  <sub>界面示意图：数据为示例，缩略图按 App 的真实「无图」占位绘制（不拿生成图冒充货物实拍）；由 <code>tool/make_screenshots.py</code> 脚本绘制，不是真机截图</sub>
 </p>
 
 一个**纯本地**的安卓计件统计 App：先在 App 里把计件资料和**货物实拍**登记好，之后对照 App 里的数据，去别的软件手动填工票（上报）。
