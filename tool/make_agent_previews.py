@@ -152,8 +152,9 @@ def diff_block(d, y):
     return y + 250
 
 
-def input_bar(d):
-    y = H - 130
+def input_bar(d, y=None):
+    if y is None:
+        y = H - 130
     d.rounded_rectangle((30, y, W - 30, y + 92), radius=26, fill=CARD,
                         outline=LINE, width=2)
     text(d, (58, y + 28), '问点什么，比如「本周多少件」', 24, INK3)
@@ -174,8 +175,9 @@ def appbar(d, title, chip=''):
 
 
 def agent_chat():
-    img = frame()
-    d = ImageDraw.Draw(img)
+    frame_img = frame()
+    screen = Image.new('RGBA', (W, H), BG + (255,))
+    d = ImageDraw.Draw(screen)
     appbar(d, 'AI 助手', '内置免费 · kilo')
     y = 160
     # 用户气泡（多需求）
@@ -220,10 +222,10 @@ def agent_chat():
     cd = ImageDraw.Draw(card)
     cd.rounded_rectangle((30, box_top, W - 30, box_bottom), radius=26,
                          fill=CARD, outline=LINE, width=2)
-    img.alpha_composite(card, (0, 0))
-    img.alpha_composite(layer, (0, 0))
+    screen.alpha_composite(card, (0, 0))
+    screen.alpha_composite(layer, (0, 0))
 
-    d = ImageDraw.Draw(img)
+    d = ImageDraw.Draw(screen)
     y2 = box_bottom + 22
     y2 = bubble_user(d, y2, ['再画一张本周的图，顺便说说怎么算的']) + 22
 
@@ -278,16 +280,22 @@ def agent_chat():
     cd2 = ImageDraw.Draw(card2)
     cd2.rounded_rectangle((30, top2, W - 30, bottom2), radius=26, fill=CARD,
                           outline=LINE, width=2)
-    img.alpha_composite(card2, (0, 0))
-    img.alpha_composite(layer2, (0, 0))
+    screen.alpha_composite(card2, (0, 0))
+    screen.alpha_composite(layer2, (0, 0))
 
-    input_bar(ImageDraw.Draw(img))
-    img.save(os.path.join(OUT, 'agent_chat.png'))
+    ib_y = bottom2 + 26
+    input_bar(ImageDraw.Draw(screen), ib_y)
+    frame_img.alpha_composite(screen, (60, 60))
+    # 按内容高度裁掉下方空白（手机框跟着变短，不留大片空区）
+    cut = min(H + 120, 60 + ib_y + 92 + 46)
+    frame_img = frame_img.crop((0, 0, W + 120, cut))
+    frame_img.save(os.path.join(OUT, 'agent_chat.png'))
 
 
 def agent_terminal():
-    img = frame()
-    d = ImageDraw.Draw(img)
+    frame_img = frame()
+    screen = Image.new('RGBA', (W, H), BG + (255,))
+    d = ImageDraw.Draw(screen)
     appbar(d, 'AI 助手')
     y = 150
     lines = wrap(d, '把 #1 的图关联到昨天那批，再用终端确认一下', 27, 660)
@@ -330,9 +338,9 @@ def agent_terminal():
     card = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     cd = ImageDraw.Draw(card)
     cd.rounded_rectangle((30, top, W - 30, term_bottom), radius=26, fill=DARK)
-    img.alpha_composite(card, (0, 0))
-    img.alpha_composite(layer, (0, 0))
-    d = ImageDraw.Draw(img)
+    screen.alpha_composite(card, (0, 0))
+    screen.alpha_composite(layer, (0, 0))
+    d = ImageDraw.Draw(screen)
 
     # AI 回复
     ry = term_bottom + 24
@@ -358,8 +366,12 @@ def agent_terminal():
     d.rounded_rectangle((300, cy + 396, 300 + 200, cy + 452), radius=14,
                         fill=(236, 239, 245))
     text(d, (326, cy + 410), '取消', 24, INK2, bold=True)
-    input_bar(d)
-    img.save(os.path.join(OUT, 'agent_terminal.png'))
+    ib_y = cy + 470 + 26
+    input_bar(d, ib_y)
+    frame_img.alpha_composite(screen, (60, 60))
+    cut = min(H + 120, 60 + ib_y + 92 + 46)
+    frame_img = frame_img.crop((0, 0, W + 120, cut))
+    frame_img.save(os.path.join(OUT, 'agent_terminal.png'))
 
 
 if __name__ == '__main__':
