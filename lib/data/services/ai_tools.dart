@@ -334,7 +334,9 @@ class AiTools {
     'date_preset': <String, dynamic>{
       'type': 'string',
       'enum': <String>['all', 'today', 'yesterday', 'this_week', 'this_month', 'custom'],
-      'description': '快捷时间范围。默认 all。用户说“本周/这个月/今天”时对应填值。',
+      'description':
+          '快捷时间范围（可选）。**不填 = all（全部时间）**。'
+          '用户说“本周/这个月/今天”时对应填值。',
     },
     'start_date': <String, dynamic>{
       'type': 'string',
@@ -347,32 +349,33 @@ class AiTools {
     'style_models': <String, dynamic>{
       'type': 'array',
       'items': <String, dynamic>{'type': 'string'},
-      'description': '款式型号，多选。留空表示不限。',
+      'description': '款式型号，多选。**可选，不填或空数组 = 不限**。',
     },
     'colors': <String, dynamic>{
       'type': 'array',
       'items': <String, dynamic>{'type': 'string'},
-      'description': '颜色，多选。留空表示不限。',
+      'description': '颜色，多选。**可选，不填或空数组 = 不限**。',
     },
     'sizes': <String, dynamic>{
       'type': 'array',
       'items': <String, dynamic>{'type': 'string'},
-      'description': '码数，多选。留空表示不限。',
+      'description': '码数，多选。**可选，不填或空数组 = 不限**。',
     },
     'min_quantity': <String, dynamic>{
       'type': 'integer',
-      'description': '单条记录数量下限（含）',
+      'description': '单条记录数量下限（含）。可选，不填 = 不限。',
     },
     'max_quantity': <String, dynamic>{
       'type': 'integer',
-      'description': '单条记录数量上限（含）',
+      'description': '单条记录数量上限（含）。可选，不填 = 不限。',
     },
     'status': <String, dynamic>{
       'type': 'string',
       'enum': <String>['pending', 'reported', 'all'],
       'description':
-          '上报状态。默认 pending=只查未上报的（用户日常口径）。'
-          '用户问「都上报了吗」「已上报的有多少」时用 all 或 reported。',
+          '上报状态筛选。**不填 = 不限（含已上报）**。'
+          '只有用户明确说「只看没上报的」才填 pending，'
+          '「已上报的有多少」才填 reported。',
     },
     'missing': <String, dynamic>{
       'type': 'array',
@@ -1373,6 +1376,24 @@ class AiToolExecutor {
 
   // ───────────────────────── query_records ─────────────────────────
 
+  /// 筛出 0 条时给模型一个台阶：告诉他不加筛选一共多少条，
+  /// 让它自己发现「条件写太窄了」，而不是直接跟用户说「0 条」。
+  Map<String, dynamic> _emptyHint(RecordFilter filter, int allCount) {
+    if (allCount == 0) {
+      return <String, dynamic>{
+        'emptyReason': '本机还没有任何记录',
+        'hint': '库里是空的，先让用户录入，别继续筛。',
+      };
+    }
+    return <String, dynamic>{
+      'emptyReason': '筛选条件太窄，一条都没匹配上',
+      'unfilteredRecordCount': allCount,
+      'hint': '不加任何筛选时本机有 $allCount 条记录。'
+          '请放宽条件（去掉型号/颜色/码数/状态等）重查，'
+          '不要直接告诉用户「没有记录」。',
+    };
+  }
+
   Future<ToolOutcome> _query(Map<String, dynamic> args) async {
     final filter = _filterFromArgs(args);
     final limit = _clampInt(args['limit'], 12, 1, 200);
@@ -1380,6 +1401,7 @@ class AiToolExecutor {
 
     final result = QueryEngine.apply(records, filter, converter: converter);
     final sliced = result.records.take(limit).toList();
+    final allCount = records.where((r) => r.deletedAt == null).length;
 
     final rows = sliced
         .map((r) => <String, dynamic>{
@@ -1407,6 +1429,7 @@ class AiToolExecutor {
       json: <String, dynamic>{
         'ok': true,
         'filterSummary': filter.summary,
+        if (result.count == 0) ..._emptyHint(filter, allCount),
         // ── 权威数字：回答里只能逐字引用这一块 ──
         'authoritative': <String, dynamic>{
           'recordCount': result.count,
@@ -1468,6 +1491,7 @@ class AiToolExecutor {
         QueryEngine.apply(records, filter, converter: converter);
     final groups =
         QueryEngine.group(result.records, field, converter: converter);
+    final allCount = records.where((r) => r.deletedAt == null).length;
 
     return ToolOutcome(
       filter: _pin(filter, result.records),
@@ -1476,6 +1500,7 @@ class AiToolExecutor {
       json: <String, dynamic>{
         'ok': true,
         'filterSummary': filter.summary,
+        if (result.count == 0) ..._emptyHint(filter, allCount),
         'groupBy': field.label,
         // ── 权威数字：各组之和必须等于这里的总计 ──
         'authoritative': <String, dynamic>{

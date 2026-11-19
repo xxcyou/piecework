@@ -60,10 +60,14 @@ extension StatusFilterX on StatusFilter {
 }
 
 /// 蛇形参数解析（AI 工具用）
+/// 上报状态筛选。
+///
+/// **不传 = 不限（all）**：以前默认 pendingOnly，模型只要漏填 status，
+/// 已上报的记录就被静默过滤掉 —— 用户看到的就是「汇总全空」。
 StatusFilter statusFilterFromWire(Object? v) => switch (v) {
       'reported' => StatusFilter.reportedOnly,
-      'all' => StatusFilter.all,
-      _ => StatusFilter.pendingOnly,
+      'pending' => StatusFilter.pendingOnly,
+      _ => StatusFilter.all,
     };
 
 /// 照片条件：忘记拍照是常态，所以「缺照片」要能单独筛出来补拍。
