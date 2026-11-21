@@ -1729,6 +1729,34 @@ class AiToolExecutor {
   ToolOutcome _createPreview(Map<String, dynamic> args) {
     final raw = args['items'];
     final items = <Map<String, dynamic>>[];
+
+    // 复制模式：把已有记录的字段搬过来，可顺带覆盖数量/单价/日期
+    final copyIds = <int>[
+      for (final v in (args['copy_from_ids'] as List?) ?? const <dynamic>[])
+        if (v is num) v.toInt(),
+    ];
+    if (copyIds.isNotEmpty) {
+      final setQty = _optInt(args['set_quantity']);
+      final setPrice = _optDouble(args['set_unit_price']);
+      final setDate = _parseDate(args['set_date']);
+      final setNote = args['set_note'] as String?;
+      for (final id in copyIds) {
+        final src = records.where((r) => r.id == id).firstOrNull;
+        if (src == null) continue;
+        items.add(<String, dynamic>{
+          'styleModel': src.styleModel,
+          'color': src.color,
+          'size': src.size,
+          'unit': src.unitOrBase,
+          'quantity': setQty ?? src.quantity,
+          'unitPrice': setPrice ?? src.unitPrice,
+          'note': setNote ?? src.note,
+          // 直接引用原记录那张图（内容寻址，不重复占空间）
+          'photoName': src.photoName,
+          if (setDate != null) 'createdAt': setDate.toIso8601String(),
+        });
+      }
+    }
     if (raw is List) {
       for (final e in raw) {
         if (e is! Map) continue;

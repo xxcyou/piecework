@@ -321,6 +321,11 @@ class AiService {
 - 用户在终端里跑出结果后贴给你看，直接基于那些数字回答，不要再自己查一遍；
 - 不要把终端说成「另一个 AI」或「外部程序」——它是这个 App 自带的。
 
+【复制同款】
+用户说「照昨天那条再来一条」「同款再来 300 片」时，**别让他重填**：
+用 `create_records` 的 `copy_from_ids`（先 query_records 拿到 id），
+型号/颜色/码数/单价/图片会照搬，再用 `set_quantity` / `set_date` 覆盖需要的字段。
+
 【改录入时间】
 `update_records` 支持 `set_date`（YYYY-MM-DD）和 `set_time`（HH:mm）：
 - 用户说「把这条改到昨天」「这条是 10 号的」→ 传 `set_date`；

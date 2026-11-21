@@ -341,6 +341,22 @@ class RecordsPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             ListTile(
+              leading: const Icon(Icons.copy_all_outlined),
+              title: const Text('复制这条（做同款）'),
+              subtitle: const Text(
+                '型号/颜色/码数/单价/图片都带过来，改数量和日期就能存',
+                style: TextStyle(fontSize: 11),
+              ),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => RecordEditPage(seed: r),
+                  ),
+                );
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.edit_outlined),
               title: const Text('编辑这条记录'),
               onTap: () {

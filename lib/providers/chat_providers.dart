@@ -637,8 +637,14 @@ ${line('本月', month)}
             // 用户带图说话：把对话图复制进记录目录并关联
             final srcPhoto = (item['photoName'] as String?) ?? '';
             if (srcPhoto.isNotEmpty) {
-              final copied =
+              // 对话里的图 → 复制进记录目录；
+              // 已经是记录目录里的图（复制同款）→ 直接引用同一份文件
+              var copied =
                   await PhotoService.instance.copyToRecords(srcPhoto);
+              if (copied == null &&
+                  await PhotoService.instance.fileOf(srcPhoto) != null) {
+                copied = srcPhoto;
+              }
               if (copied != null) {
                 r.photoName = copied;
                 withPhoto++;

@@ -24,9 +24,13 @@ import 'camera_capture_page.dart';
 /// * 传 [recordId] 为编辑，否则为新增；
 /// * 新增时会用设置里的「默认单价」预填。
 class RecordEditPage extends ConsumerStatefulWidget {
-  const RecordEditPage({super.key, this.recordId});
+  const RecordEditPage({super.key, this.recordId, this.seed});
 
   final int? recordId;
+
+  /// 复制模式：用这条记录的值预填，但**保存成一条新记录**
+  /// （同款懒得重新填：复制 → 改数量/日期 → 保存）
+  final PieceRecord? seed;
 
   @override
   ConsumerState<RecordEditPage> createState() => _RecordEditPageState();
@@ -58,12 +62,15 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
   int _sharedCount = 0;
 
   bool get _isEdit => widget.recordId != null;
+  bool get _isCopy => !_isEdit && widget.seed != null;
 
   @override
   void initState() {
     super.initState();
     if (_isEdit) {
       _loadExisting();
+    } else if (widget.seed != null) {
+      _initCopy(widget.seed!);
     } else {
       _initNew();
     }
@@ -89,6 +96,31 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
             Money.plain(Money.toMilli(settings.defaultUnitPrice));
       }
       _qtyCtrl.text = '1';
+      _loading = false;
+    });
+  }
+
+  /// 复制模式：把原记录的字段搬过来（时间用现在，可在页面上改）
+  Future<void> _initCopy(PieceRecord src) async {
+    var shared = 0;
+    if (src.photoName.isNotEmpty) {
+      shared = await ref.read(photoGcProvider).refCount(src.photoName);
+    }
+    if (!mounted) return;
+    setState(() {
+      _styleCtrl.text = src.styleModel;
+      _colorCtrl.text = src.color;
+      _sizeCtrl.text = src.size;
+      _qtyCtrl.text = src.quantity.toString();
+      _priceCtrl.text = src.unitPrice == 0
+          ? ''
+          : Money.plain(Money.toMilli(src.unitPrice));
+      _noteCtrl.text = src.note;
+      _unit = src.unitOrBase;
+      // 图片直接引用同一份文件（内容寻址，不重复占空间）
+      _photoName = src.photoName;
+      _sharedCount = shared;
+      _atOverride = DateTime.now();
       _loading = false;
     });
   }
@@ -283,8 +315,24 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEdit ? '编辑记录' : '录入记录'),
+        title: Text(_isEdit ? '编辑记录' : (_isCopy ? '复制记录' : '录入记录')),
         actions: <Widget>[
+          if (_isEdit)
+            IconButton(
+              tooltip: '复制这条（做同款）',
+              icon: const Icon(Icons.copy_all_outlined, size: 20),
+              onPressed: _saving
+                  ? null
+                  : () {
+                      final src = _existing;
+                      if (src == null) return;
+                      Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => RecordEditPage(seed: src),
+                        ),
+                      );
+                    },
+            ),
           TextButton(
             onPressed: _saving ? null : _save,
             child: Text(_saving ? '保存中…' : '保存'),
