@@ -3,12 +3,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/money.dart';
 import '../../data/models/operation_log.dart';
 import '../../data/models/operation_view.dart';
 import '../../data/services/unit_converter.dart';
 import '../../data/models/piece_record.dart';
 import '../../data/models/record_filter.dart';
 import '../../data/services/record_codec.dart';
+import '../../data/services/selection_summary.dart';
 import '../../providers/db_providers.dart';
 import '../../providers/records_providers.dart';
 import '../../providers/units_providers.dart';
@@ -93,6 +95,19 @@ class RecordsPage extends ConsumerWidget {
                         result.records,
                         selection,
                         false,
+                      ),
+            ),
+            IconButton(
+              tooltip: '汇总所选（数量 / 金额）',
+              icon: const Icon(Icons.calculate_outlined),
+              onPressed: selection.isEmpty
+                  ? null
+                  : () => _showSelectionSummary(
+                        context,
+                        ref,
+                        result.records
+                            .where((r) => selection.contains(r.id))
+                            .toList(),
                       ),
             ),
             IconButton(
@@ -341,12 +356,21 @@ class RecordsPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             ListTile(
-              leading: const Icon(Icons.copy_all_outlined),
-              title: const Text('复制这条（做同款）'),
+              leading: const Icon(Icons.checklist_rounded),
+              title: const Text('多选'),
               subtitle: const Text(
-                '型号/颜色/码数/单价/图片都带过来，改数量和日期就能存',
+                '勾选多条后可以汇总数量/金额、批量上报或删除',
                 style: TextStyle(fontSize: 11),
               ),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                ref.read(selectionModeProvider.notifier).enter();
+                ref.read(selectionProvider.notifier).toggle(r.id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy_all_outlined),
+              title: const Text('复制'),
               onTap: () {
                 Navigator.of(ctx).pop();
                 Navigator.of(context).push<void>(
@@ -482,6 +506,183 @@ class RecordsPage extends ConsumerWidget {
 
     ref.read(selectionProvider.notifier).clear();
     ref.read(selectionModeProvider.notifier).exit();
+  }
+
+  /// 多选汇总：数量（跨单位自动折算）+ 金额 + 按型号·颜色·码数分组小计
+  void _showSelectionSummary(
+    BuildContext context,
+    WidgetRef ref,
+    List<PieceRecord> picked,
+  ) {
+    final converter = ref.read(unitConverterProvider);
+    final sum = SelectionSummary.of(picked, converter);
+    final scheme = Theme.of(context).colorScheme;
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.62,
+        maxChildSize: 0.92,
+        builder: (_, controller) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(Icons.calculate_outlined, size: 18, color: scheme.primary),
+                const SizedBox(width: 6),
+                Text('所选 ${sum.count} 条',
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w700)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // 数量
+            _sumRow(
+              scheme,
+              '数量',
+              sum.mixedUnits
+                  ? '${Money.format(Money.toMilli(sum.baseQty))} ${sum.baseUnit}（折算）'
+                  : '${sum.qty} ${sum.units.isEmpty ? '' : sum.units.first}',
+              note: sum.mixedUnits
+                  ? '原始单位：${sum.units.join(' + ')}；按单位换算规则折算'
+                  : null,
+            ),
+            // 金额
+            _sumRow(
+              scheme,
+              '金额',
+              Money.format(sum.amountMilli),
+              note: sum.unpricedCount > 0
+                  ? '另有 ${sum.unpricedCount} 条未计价（共 ${sum.unpricedQty} 件），'
+                      '金额未包含它们'
+                  : null,
+              highlight: true,
+            ),
+            if (sum.lines.length > 1) ...<Widget>[
+              const SizedBox(height: 14),
+              Text('按型号 · 颜色 · 码数分组',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurfaceVariant)),
+              const SizedBox(height: 6),
+              for (final l in sum.lines)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest.withAlpha(45),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(l.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                          Text(
+                            '${l.count} 条',
+                            style: TextStyle(
+                                fontSize: 11, color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: <Widget>[
+                          Text(
+                            l.mixedUnits
+                                ? '${(l.centiBase / 100).toStringAsFixed(2)} ${sum.baseUnit}（折算）'
+                                : '${l.qty} ${l.units.isEmpty ? '' : l.units.first}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          const Spacer(),
+                          Text(
+                            Money.format(l.amountMilli),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: scheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (l.unpricedCount > 0)
+                        Text(
+                          '其中 ${l.unpricedCount} 条未计价',
+                          style: TextStyle(
+                              fontSize: 10.5, color: scheme.error),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+            const SizedBox(height: 10),
+            Text(
+              '金额按「整数厘」累加，不会出现浮点误差；跨单位数量按设置里的换算规则折算。',
+              style: TextStyle(
+                  fontSize: 10.5, height: 1.5, color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sumRow(
+    ColorScheme scheme,
+    String label,
+    String value, {
+    String? note,
+    bool highlight = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: highlight ? scheme.primary.withAlpha(14) : scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant.withAlpha(120)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 12, color: scheme.onSurfaceVariant)),
+              const Spacer(),
+              Text(value,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: highlight ? scheme.primary : scheme.onSurface,
+                  )),
+            ],
+          ),
+          if (note != null) ...<Widget>[
+            const SizedBox(height: 3),
+            Text(note,
+                style: TextStyle(
+                    fontSize: 10.5,
+                    height: 1.4,
+                    color: scheme.onSurfaceVariant)),
+          ],
+        ],
+      ),
+    );
   }
 
   /// 批量改上报状态

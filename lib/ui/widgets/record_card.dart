@@ -5,6 +5,7 @@ import '../../core/money.dart';
 import '../../core/theme.dart';
 import '../../data/models/piece_record.dart';
 import '../../data/services/unit_converter.dart';
+import 'color_chip.dart';
 import 'photo_thumb.dart';
 
 /// 单条记录卡片。
@@ -139,7 +140,7 @@ class RecordCard extends StatelessWidget {
                                     : Icons.edit_outlined),
                           ),
                         if (record.color.isNotEmpty)
-                          TagChip(label: record.color, dense: true)
+                          ColorChip(name: record.color, size: 10)
                         else
                           TagChip(
                             label: '缺颜色',

@@ -15,8 +15,10 @@ import '../../providers/photo_library_providers.dart';
 import '../../providers/settings_providers.dart';
 import '../../providers/units_providers.dart';
 import '../tour_keys.dart';
+import '../widgets/color_chip.dart';
 import '../widgets/suggest_field.dart';
 import 'camera_capture_page.dart';
+import 'color_picker_page.dart';
 
 /// 录入 / 编辑记录页。
 ///
@@ -467,6 +469,28 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
     );
   }
 
+  /// 当前有没有可用于取色的图（新拍/新选的，或原来那张）
+  bool get _hasPhotoForPick =>
+      _pendingBytes != null || _photoName.isNotEmpty;
+
+  Future<void> _pickColorFromPhoto() async {
+    // 新拍的图还没落盘：先存成临时图再取色
+    var name = _photoName;
+    if (_pendingBytes != null) {
+      name = await PhotoService.instance.saveBytes(_pendingBytes!);
+      if (!mounted) return;
+      setState(() => _photoName = name);
+    }
+    if (name.isEmpty) return;
+    final picked = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        builder: (_) => ColorPickerPage(photoName: name),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _colorCtrl.text = picked);
+  }
+
   Future<void> _pickDateTime() async {
     final base = _at;
     final date = await showDatePicker(
@@ -724,12 +748,38 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: SuggestField(
-                  controller: _colorCtrl,
-                  label: '颜色（选填）',
-                  hint: '不知道可留空',
-                  options: colorOptions,
-                  onChanged: (_) => setState(() {}),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: SuggestField(
+                        controller: _colorCtrl,
+                        label: '颜色（选填）',
+                        hint: '不知道可留空',
+                        options: colorOptions,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    if (_colorCtrl.text.trim().isNotEmpty) ...<Widget>[
+                      const SizedBox(width: 6),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: ColorChip(
+                          name: _colorCtrl.text,
+                          size: 11,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                    // 取色针：有照片就能从货物实拍取色
+                    IconButton(
+                      tooltip: _hasPhotoForPick
+                          ? '从货物实拍取色'
+                          : '先拍照/选图才能取色',
+                      icon: const Icon(Icons.colorize, size: 19),
+                      onPressed: _hasPhotoForPick ? _pickColorFromPhoto : null,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 10),
