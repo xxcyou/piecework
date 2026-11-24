@@ -7,6 +7,8 @@
 
     <!-- 2. 网络：仅用于调用你自建的 AI 接口（数据本身不出本机） -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 应用内自动更新：安装下载好的 APK -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- 3. 相册写入：导出 PNG 报表到系统相册（Android 9 及以下才需要旧权限） -->

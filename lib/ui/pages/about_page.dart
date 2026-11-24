@@ -91,7 +91,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
         ],
       ),
     );
-    if (go == true) await UrlOpener.open(accelerateUrl(r.apkUrl));
+    if (go == true && mounted) await runInAppUpdate(context, r);
   }
 
   @override

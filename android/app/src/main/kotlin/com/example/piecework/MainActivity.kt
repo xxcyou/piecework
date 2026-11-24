@@ -26,6 +26,56 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     private val channelName = "piecework/public_storage"
+
+    /** 用 PackageInstaller 安装下载好的 APK（Android 7+ 不能再用 file:// 直接装） */
+    private fun installApk(path: String, result: MethodChannel.Result) {
+        try {
+            val file = java.io.File(path)
+            if (path.isEmpty() || !file.exists()) {
+                result.error("missing", "APK 不存在：$path", null)
+                return
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
+                !packageManager.canRequestPackageInstalls()
+            ) {
+                // 先去让用户允许「安装未知应用」
+                startActivity(
+                    android.content.Intent(
+                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        android.net.Uri.parse("package:$packageName"),
+                    ),
+                )
+                result.error("need_permission", "请允许「安装未知应用」后再点一次更新", null)
+                return
+            }
+            val params = android.content.pm.PackageInstaller.SessionParams(
+                android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL,
+            )
+            val installer = packageManager.packageInstaller
+            val sessionId = installer.createSession(params)
+            installer.openSession(sessionId).use { session ->
+                file.inputStream().use { input ->
+                    session.openWrite("piecework.apk", 0, file.length()).use { out ->
+                        input.copyTo(out)
+                        session.fsync(out)
+                    }
+                }
+                val intent = android.content.Intent("$packageName.INSTALL_RESULT")
+                    .setPackage(packageName)
+                val flags = if (android.os.Build.VERSION.SDK_INT >= 31) {
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                        android.app.PendingIntent.FLAG_MUTABLE
+                } else {
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT
+                }
+                val pi = android.app.PendingIntent.getBroadcast(this, sessionId, intent, flags)
+                session.commit(pi.intentSender)
+            }
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("install_failed", e.message, null)
+        }
+    }
     private val requestPickFolder = 4711
     private var pendingPick: MethodChannel.Result? = null
 
@@ -36,6 +86,10 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 try {
                     when (call.method) {
+                        "installApk" -> {
+                            // 应用内自动更新：把下载好的 APK 交给系统安装器
+                            installApk(call.argument<String>("path") ?: "", result)
+                        }
                         "openUrl" -> {
                             // 用系统浏览器打开链接（更新下载 / 项目主页）
                             val url = call.argument<String>("url") ?: ""
