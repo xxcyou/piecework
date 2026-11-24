@@ -7,56 +7,89 @@ import '../../data/services/update_installer.dart';
 import '../../data/services/url_opener.dart';
 
 /// 更新弹窗：返回 'go' / 'skip' / 'later'
+///
+/// 按钮只留两个（稍后 / 立即更新），「忽略本次版本」放到内容区底部的小链接，
+/// 避免 4 个按钮挤成两行、排版错乱。
 Future<String?> showUpdateDialog(
   BuildContext context,
   RemoteRelease r, {
   bool preview = false,
 }) {
+  final scheme = Theme.of(context).colorScheme;
   return showDialog<String>(
     context: context,
     barrierDismissible: !r.force,
     builder: (ctx) => AlertDialog(
+      titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+      contentPadding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+      actionsPadding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
       title: Row(
         children: <Widget>[
-          const Icon(Icons.system_update_alt, size: 20),
+          Icon(Icons.system_update_alt, size: 20, color: scheme.primary),
           const SizedBox(width: 6),
-          Expanded(child: Text('发现新版本 v${r.versionName}')),
+          Expanded(
+            child: Text(
+              '发现新版本 v${r.versionName}',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
         ],
       ),
       content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
+        constraints: const BoxConstraints(maxWidth: 400),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Text(
-                '当前 v$kAppVersionName（$kAppVersionCode）',
+                '当前 v$kAppVersionName（$kAppVersionCode）'
+                '${r.force ? ' · 必须更新' : ''}',
                 style: TextStyle(
                   fontSize: 11.5,
-                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
               if (r.notes.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 8),
-                Text(r.notes,
-                    style: const TextStyle(fontSize: 12.5, height: 1.5)),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest.withAlpha(60),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    r.notes,
+                    style: const TextStyle(fontSize: 12.5, height: 1.6),
+                  ),
+                ),
               ],
               const SizedBox(height: 10),
-              SelectableText(
-                accelerateUrl(r.apkUrl),
+              Text(
+                preview
+                    ? '（模拟预览，不会真的下载）'
+                    : '点「立即更新」会在 App 内下载并直接调起系统安装，覆盖安装，数据不丢。',
                 style: TextStyle(
-                  fontSize: 10,
-                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  fontSize: 11,
+                  height: 1.4,
+                  color: preview ? scheme.primary : scheme.onSurfaceVariant,
                 ),
               ),
-              if (preview) ...<Widget>[
-                const SizedBox(height: 8),
-                Text(
-                  '（这是模拟预览，不会真的下载）',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: Theme.of(ctx).colorScheme.primary,
+              if (!r.force && !preview) ...<Widget>[
+                const SizedBox(height: 2),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(ctx).pop('skip'),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 30),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: scheme.onSurfaceVariant,
+                      textStyle: const TextStyle(fontSize: 11),
+                    ),
+                    child: const Text('忽略这个版本（下次再说）'),
                   ),
                 ),
               ],
@@ -64,28 +97,19 @@ Future<String?> showUpdateDialog(
           ),
         ),
       ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: <Widget>[
-        TextButton(
-          onPressed: () async {
-            await Clipboard.setData(
-                ClipboardData(text: accelerateUrl(r.apkUrl)));
-            if (ctx.mounted) Navigator.of(ctx).pop('copy');
-          },
-          child: const Text('复制链接'),
-        ),
-        if (!r.force)
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop('skip'),
-            child: const Text('本次忽略'),
-          ),
         if (!r.force)
           TextButton(
             onPressed: () => Navigator.of(ctx).pop('later'),
             child: const Text('稍后'),
-          ),
-        FilledButton(
+          )
+        else
+          const SizedBox.shrink(),
+        FilledButton.icon(
           onPressed: () => Navigator.of(ctx).pop('go'),
-          child: const Text('立即更新'),
+          icon: const Icon(Icons.download_rounded, size: 17),
+          label: Text(preview ? '看看效果' : '立即更新'),
         ),
       ],
     ),
