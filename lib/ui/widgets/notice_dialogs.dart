@@ -178,14 +178,15 @@ Future<void> handleUpdateDialog(
   await runInAppUpdate(context, r);
 }
 
-/// 下载 + 安装（带进度条）。失败给出人话提示，并允许改用浏览器下载兜底。
+/// 下载 → 确认 → 安装（带进度条）
+///
+/// 下载和安装拆成两步：安装器万一没弹，用户能再点一次，不用重新下载。
 Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
   final progress = ValueNotifier<double?>(0);
   final received = ValueNotifier<int>(0);
   final total = ValueNotifier<int>(0);
 
   if (!context.mounted) return;
-  // 进度弹窗（不可取消，避免下载一半退出）
   showDialog<void>(
     context: context,
     barrierDismissible: false,
@@ -215,80 +216,134 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
                           ? '${((v ?? 0) * 100).toStringAsFixed(0)}%'
                               ' · ${(received.value / 1024 / 1024).toStringAsFixed(1)}'
                               ' / ${(t / 1024 / 1024).toStringAsFixed(1)} MB'
-                          : '已下载 ${(received.value / 1024 / 1024).toStringAsFixed(1)} MB',
+                          : '${(received.value / 1024 / 1024).toStringAsFixed(1)} MB',
                       style: const TextStyle(fontSize: 11.5),
                     ),
                   ),
                 ],
               ),
             ),
-
           ],
         ),
       ),
     ),
   );
 
-  ({bool ok, String message}) result;
+  String? path;
+  String err = '';
   try {
-    result = await UpdateInstaller.instance.downloadAndInstall(
-      r.apkUrl,
-      onProgress: (f, got, t) {
-        progress.value = f;
-        received.value = got;
-        total.value = t;
-      },
-    );
+    path = await UpdateInstaller.instance
+        .download(r.apkUrl, onProgress: (f, got, t) {
+      progress.value = f;
+      received.value = got;
+      total.value = t;
+    });
   } catch (e) {
-    result = (ok: false, message: '$e');
+    err = '$e';
   }
 
   if (!context.mounted) return;
-  // 关掉进度弹窗
   Navigator.of(context, rootNavigator: true).pop();
   progress.dispose();
   received.dispose();
   total.dispose();
 
-  if (result.ok) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('下载完成，去系统弹窗点「安装」')),
+  if (path == null) {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('下载失败'),
+        content: Text(err, style: const TextStyle(fontSize: 12)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('关闭'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              UrlOpener.open(accelerateUrl(r.apkUrl));
+            },
+            child: const Text('浏览器下载'),
+          ),
+        ],
+      ),
     );
     return;
   }
 
-  final needPerm = result.message.contains('安装未知应用') ||
-      result.message.contains('need_permission') ||
-      result.message.toLowerCase().contains('unknown sources');
-  final retry = await showDialog<String>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(needPerm ? '需要允许安装' : '更新失败'),
-      content: Text(
-        needPerm ? '打开「安装未知应用」权限后重试。' : '${result.message}',
-        style: const TextStyle(fontSize: 12.5, height: 1.5),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop('browser'),
-          child: const Text('浏览器下载'),
-        ),
-        if (needPerm)
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop('settings'),
-            child: const Text('去允许'),
-          )
-        else
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop('ok'),
-            child: const Text('知道了'),
+  // 下载完成 → 确认安装（可重复点）
+  var trying = true;
+  while (trying) {
+    if (!context.mounted) return;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('已下载 v${r.versionName}'),
+        content: const Text('点「安装」，在系统弹窗里确认即可覆盖安装。',
+            style: TextStyle(fontSize: 12.5)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('稍后'),
           ),
-      ],
-    ),
-  );
-  if (retry == 'browser') {
-    await UrlOpener.open(accelerateUrl(r.apkUrl));
-  } else if (retry == 'settings') {
-    await UpdateInstaller.instance.openInstallSettings();
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('安装'),
+          ),
+        ],
+      ),
+    );
+    if (go != true) return;
+
+    final res = await UpdateInstaller.instance.install(path);
+    if (res.ok) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已调起系统安装器')),
+      );
+      return;
+    }
+    trying = false;
+    if (!context.mounted) return;
+    final needPerm = res.message.contains('安装未知应用') ||
+        res.message.contains('need_permission');
+    final retry = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(needPerm ? '需要允许安装' : '没调起安装器'),
+        content: Text(
+          needPerm
+              ? '打开「安装未知应用」权限后再试。'
+              : '${res.message}\n\n安装包已下好，也可以重试或用浏览器重新下载。',
+          style: const TextStyle(fontSize: 12.5, height: 1.5),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('browser'),
+            child: const Text('浏览器下载'),
+          ),
+          if (needPerm)
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop('settings'),
+              child: const Text('去允许'),
+            )
+          else
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop('again'),
+              child: const Text('重试'),
+            ),
+        ],
+      ),
+    );
+    if (retry == 'browser') {
+      await UrlOpener.open(accelerateUrl(r.apkUrl));
+      return;
+    } else if (retry == 'settings') {
+      await UpdateInstaller.instance.openInstallSettings();
+      return;
+    } else if (retry == 'again') {
+      trying = true;
+    }
   }
 }

@@ -32,9 +32,10 @@ class MainActivity : FlutterActivity() {
     /**
      * 安装下载好的 APK。
      *
-     * 以前先查 canRequestPackageInstalls() 再装 —— 有些 ROM 这个查询和实际开关
-     * 不同步，用户明明开了还一直被拦。现在改成**直接装**：
-     * 真被拦时系统会抛 SecurityException，再把「去允许」的提示抛给 Dart。
+     * 顺序是踩坑换来的：**先走 FileProvider + ACTION_VIEW**（系统安装器直接弹，
+     * 兼容性最好）；这条路被拦或抛异常，再退回 PackageInstaller。
+     * 以前反过来，某些 ROM 上 PackageInstaller 的 commit 静默失败，
+     * 表现就是「下载完了什么也没发生」。
      */
     private fun installApk(path: String, result: MethodChannel.Result) {
         val file = java.io.File(path)
@@ -42,7 +43,27 @@ class MainActivity : FlutterActivity() {
             result.error("missing", "安装包不存在", null)
             return
         }
-        // 先试 PackageInstaller（现代方式）
+
+        // 1) FileProvider + ACTION_VIEW
+        try {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                file,
+            )
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            result.success(true)
+            return
+        } catch (e: Exception) {
+            // 落到 PackageInstaller
+        }
+
+        // 2) PackageInstaller
         try {
             val params = android.content.pm.PackageInstaller.SessionParams(
                 android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL,
@@ -67,27 +88,6 @@ class MainActivity : FlutterActivity() {
                 val pi = android.app.PendingIntent.getBroadcast(this, sessionId, intent, flags)
                 session.commit(pi.intentSender)
             }
-            result.success(true)
-            return
-        } catch (e: SecurityException) {
-            // 未知来源被禁 → 交给下面的 Intent 方式再试一次
-        } catch (e: Exception) {
-            // 有些 ROM 的 PackageInstaller 直接不可用，换 Intent 方式
-        }
-
-        // 再试 Intent + FileProvider（兼容性更好）
-        try {
-            val uri = androidx.core.content.FileProvider.getUriForFile(
-                this,
-                "$packageName.fileprovider",
-                file,
-            )
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
             result.success(true)
         } catch (e: SecurityException) {
             result.error("need_permission", "需要允许安装未知应用", null)
