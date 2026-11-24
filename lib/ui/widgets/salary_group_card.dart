@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/money.dart';
 import '../../data/models/piece_record.dart';
 import '../../data/services/salary_summary.dart';
-import 'color_chip.dart';
 
 /// 财务模式的一行：同款汇总（型号·颜色·码数 / 数量 / 单价 / 金额）
 ///

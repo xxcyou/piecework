@@ -2816,12 +2816,10 @@ class AiToolExecutor {
           return sum(b.value).compareTo(sum(a.value));
         });
       for (final e in entries) {
-        var qty = 0;
         var centi = 0;
         var amount = 0;
         final prices = <double>{};
         for (final r in e.value) {
-          qty += r.quantity;
           centi += (converter.centiBasePerUnit(r.unit) * r.quantity);
           amount += Money.multiply(r.quantity, r.unitPrice);
           if (r.unitPrice > 0) prices.add(r.unitPrice);
