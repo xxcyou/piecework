@@ -24,6 +24,27 @@ import 'unit_converter.dart';
 ///
 /// 除了回给模型的 JSON，还带回 [filter] / [groups]，
 /// UI 据此渲染「查看这批记录 →」按钮和统计卡片。
+/// 报表草稿里的一行（虚拟或真实），只用于生成报表，不落库
+class _DraftRow {
+  const _DraftRow({
+    required this.styleModel,
+    required this.color,
+    required this.size,
+    required this.note,
+    required this.unit,
+    required this.quantity,
+    required this.unitPrice,
+  });
+
+  final String styleModel;
+  final String color;
+  final String size;
+  final String note;
+  final String unit;
+  final int quantity;
+  final double unitPrice;
+}
+
 class ToolOutcome {
   const ToolOutcome({
     required this.json,
@@ -653,6 +674,13 @@ class AiTools {
               'type': 'number',
               'description': '新增记录时预填的单价',
             },
+            'work_mode': <String, dynamic>{
+              'type': 'string',
+              'enum': <String>['financial', 'audit'],
+              'description':
+                  '工作模式：financial=财务模式（按型号汇总、不显示日期），'
+                  'audit=审计模式（逐条明细）',
+            },
           },
           'required': <String>[],
         },
@@ -1148,6 +1176,61 @@ class AiTools {
     <String, dynamic>{
       'type': 'function',
       'function': <String, dynamic>{
+        'name': 'build_report_draft',
+        'description':
+            '生成一张**只用于看/发出去**的报表草稿：可以塞进真实记录里没有的数据，'
+            '**不会写进计件记录**（不污染数据库）。'
+            '用户说「帮我做张报表，里面加几条假数据」「按这个数出一张工资表」时用。',
+        'parameters': <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'title': <String, dynamic>{
+              'type': 'string',
+              'description': '报表标题，默认「计件明细报表」',
+            },
+            'subtitle': <String, dynamic>{
+              'type': 'string',
+              'description': '副标题（可选）',
+            },
+            'profile_name': <String, dynamic>{
+              'type': 'string',
+              'description': '报表上的身份名（默认用当前身份）',
+            },
+            'mode': <String, dynamic>{
+              'type': 'string',
+              'enum': <String>['financial', 'audit'],
+              'description': 'financial=按型号汇总（财务模式），audit=逐条明细（审计模式）',
+            },
+            'rows': <String, dynamic>{
+              'type': 'array',
+              'description': '要额外加进报表的行（虚构数据），按 mode 决定字段',
+              'items': <String, dynamic>{
+                'type': 'object',
+                'properties': <String, dynamic>{
+                  'style_model': <String, dynamic>{'type': 'string'},
+                  'color': <String, dynamic>{'type': 'string'},
+                  'size': <String, dynamic>{'type': 'string'},
+                  'quantity': <String, dynamic>{'type': 'integer'},
+                  'unit': <String, dynamic>{'type': 'string'},
+                  'unit_price': <String, dynamic>{'type': 'number'},
+                  'note': <String, dynamic>{'type': 'string'},
+                },
+                'required': <String>['quantity'],
+              },
+            },
+            'include_records': <String, dynamic>{
+              'type': 'boolean',
+              'description': 'true = 把本机真实记录也并进这张报表（默认 false，只用 rows）',
+            },
+            ..._filterProps,
+          },
+          'required': <String>[],
+        },
+      },
+    },
+    <String, dynamic>{
+      'type': 'function',
+      'function': <String, dynamic>{
         'name': 'export_report',
         'description': '打开报表页准备导出（PNG 或 CSV）。AI 不能直接写文件，'
             '会跳转过去让用户点导出。',
@@ -1399,6 +1482,8 @@ class AiToolExecutor {
         return _undoOperation(args);
       case 'restore_records':
         return _restoreRecords(args);
+      case 'build_report_draft':
+        return _buildReportDraft(args);
       case 'export_report':
         return _exportReport(args);
       case 'predict_income':
@@ -1887,6 +1972,8 @@ class AiToolExecutor {
       json: <String, dynamic>{
         'ok': true,
         'theme': <String>['system', 'light', 'dark'][s.themeModeIndex.clamp(0, 2)],
+        'workMode': s.workMode == 0 ? 'financial' : 'audit',
+        'workModeLabel': s.workMode == 0 ? '财务模式' : '审计模式',
         'reportTitle': s.reportTitle,
         'reportFontScale': s.reportFontScale,
         'reportTemplate': s.reportTemplate == 1 ? 'compact' : 'external',
@@ -1940,6 +2027,13 @@ class AiToolExecutor {
       if (price != null) {
         s.defaultUnitPrice = price;
         applied['defaultUnitPrice'] = price;
+      }
+      final mode = args['work_mode'] as String?;
+      if (mode != null) {
+        if (mode == 'financial' || mode == 'audit') {
+          s.workMode = mode == 'financial' ? 0 : 1;
+          applied['workMode'] = mode;
+        }
       }
     });
 
@@ -2633,6 +2727,179 @@ class AiToolExecutor {
 
     return ToolOutcome(
       json: <String, dynamic>{'ok': false, 'error': '不支持的 action：$action'},
+    );
+  }
+
+  // ───────────────────────── 报表草稿（不落库）─────────────────────────
+
+  /// 生成「只看不存」的报表：可以塞虚构数据，绝不写进计件记录。
+  Future<ToolOutcome> _buildReportDraft(Map<String, dynamic> args) async {
+    final converter = await _converter();
+    final mode = (args['mode'] as String?) ?? 'financial';
+    final title = (args['title'] as String?)?.trim().isNotEmpty == true
+        ? (args['title'] as String).trim()
+        : (mode == 'financial' ? '工资表' : '计件明细报表');
+    final subtitle = (args['subtitle'] as String?)?.trim() ?? '';
+    final profile = (args['profile_name'] as String?)?.trim().isNotEmpty == true
+        ? (args['profile_name'] as String).trim()
+        : profileName;
+
+    // 1) 虚拟行（用户/AI 编的数据）
+    final virtualRows = <_DraftRow>[];
+    for (final raw in (args['rows'] as List?) ?? const <dynamic>[]) {
+      if (raw is! Map) continue;
+      final m = raw.map((k, v) => MapEntry(k.toString(), v));
+      final qty = _optInt(m['quantity']) ?? 0;
+      if (qty <= 0) continue;
+      virtualRows.add(
+        _DraftRow(
+          styleModel: (m['style_model'] as String?)?.trim() ?? '',
+          color: (m['color'] as String?)?.trim() ?? '',
+          size: (m['size'] as String?)?.trim() ?? '',
+          note: (m['note'] as String?)?.trim() ?? '',
+          unit: (m['unit'] as String?)?.trim().isNotEmpty == true
+              ? (m['unit'] as String).trim()
+              : converter.baseUnit,
+          quantity: qty,
+          unitPrice: _optDouble(m['unit_price']) ?? 0,
+        ),
+      );
+    }
+
+    // 2) 可选：把本机真实记录并进来
+    final includeReal = args['include_records'] == true;
+    final realRows = <_DraftRow>[];
+    if (includeReal) {
+      final filter = _filterFromArgs(args);
+      final picked =
+          QueryEngine.apply(records, filter, converter: converter).records;
+      for (final r in picked) {
+        realRows.add(
+          _DraftRow(
+            styleModel: r.styleModel,
+            color: r.color,
+            size: r.size,
+            note: r.note,
+            unit: r.unitOrBase,
+            quantity: r.quantity,
+            unitPrice: r.unitPrice,
+          ),
+        );
+      }
+    }
+
+    final all = <_DraftRow>[...realRows, ...virtualRows];
+    if (all.isEmpty) {
+      return ToolOutcome(
+        json: <String, dynamic>{
+          'ok': false,
+          'error': '报表里没有任何行：给 rows 或 include_records=true',
+        },
+      );
+    }
+
+    // 3) 按模式整理成表格行
+    final lines = <({String label, String qty, String price, int amountMilli})>[];
+    var totalMilli = 0;
+    var totalCenti = 0;
+
+    if (mode == 'financial') {
+      // 按型号汇总
+      final byStyle = <String, List<_DraftRow>>{};
+      for (final r in all) {
+        byStyle.putIfAbsent(r.styleModel, () => <_DraftRow>[]).add(r);
+      }
+      final entries = byStyle.entries.toList()
+        ..sort((a, b) {
+          int sum(List<_DraftRow> l) =>
+              l.fold(0, (p, e) => p + Money.multiply(e.quantity, e.unitPrice));
+          return sum(b.value).compareTo(sum(a.value));
+        });
+      for (final e in entries) {
+        var qty = 0;
+        var centi = 0;
+        var amount = 0;
+        final prices = <double>{};
+        for (final r in e.value) {
+          qty += r.quantity;
+          centi += (converter.centiBasePerUnit(r.unit) * r.quantity);
+          amount += Money.multiply(r.quantity, r.unitPrice);
+          if (r.unitPrice > 0) prices.add(r.unitPrice);
+        }
+        totalMilli += amount;
+        totalCenti += centi;
+        lines.add((
+          label: e.key.trim().isEmpty ? '（未填型号）' : e.key.trim(),
+          qty: '${(centi / 100).toStringAsFixed(centi % 100 == 0 ? 0 : 2)} '
+              '${converter.baseUnit}',
+          price: prices.length == 1
+              ? Money.plain(Money.toMilli(prices.first))
+              : '不一',
+          amountMilli: amount,
+        ));
+      }
+    } else {
+      for (final r in all) {
+        final amount = Money.multiply(r.quantity, r.unitPrice);
+        totalMilli += amount;
+        totalCenti += (converter.centiBasePerUnit(r.unit) * r.quantity);
+        lines.add((
+          label: <String>[
+            r.styleModel.isEmpty ? '（未填型号）' : r.styleModel,
+            if (r.color.isNotEmpty) r.color,
+            if (r.size.isNotEmpty) r.size,
+          ].join(' · '),
+          qty: '${r.quantity} ${r.unit}',
+          price: r.unitPrice == 0
+              ? '—'
+              : Money.plain(Money.toMilli(r.unitPrice)),
+          amountMilli: amount,
+        ));
+      }
+    }
+
+    final totalText = Money.format(totalMilli);
+    final steps = <CalcStep>[
+      for (final l in lines)
+        CalcStep(
+          label: l.label,
+          expression: '${l.qty} × ${l.price}',
+          result: Money.format(l.amountMilli),
+        ),
+    ];
+
+    return ToolOutcome(
+      json: <String, dynamic>{
+        'ok': true,
+        'title': title,
+        'subtitle': subtitle,
+        'profile': profile,
+        'mode': mode,
+        'rowCount': lines.length,
+        'totalAmount': Money.yuan(totalMilli),
+        'totalText': totalText,
+        'totalQuantityCenti': totalCenti,
+        'baseUnit': converter.baseUnit,
+        'virtualRows': virtualRows.length,
+        'realRows': realRows.length,
+        'note': '只是报表草稿：没有写入任何计件记录，本机数据不变。',
+        'rows': <Map<String, dynamic>>[
+          for (final l in lines)
+            <String, dynamic>{
+              'label': l.label,
+              'quantity': l.qty,
+              'unitPrice': l.price,
+              'amount': Money.yuan(l.amountMilli),
+            },
+        ],
+      },
+      calc: CalcTable(
+        title: '$title${profile.isEmpty ? '' : ' · $profile'}',
+        steps: steps,
+        conclusion: '合计 $totalText'
+            '${subtitle.isEmpty ? '' : ' · $subtitle'}'
+            '（报表草稿，未写入记录）',
+      ),
     );
   }
 
@@ -3598,6 +3865,7 @@ class AiToolExecutor {
         'list_operations' => '操作历史',
         'undo_operation' => '撤销操作',
         'restore_records' => '回收站恢复',
+        'build_report_draft' => '生成报表草稿',
         'export_report' => '导出报表',
         'predict_income' => '收入预估',
         'unit_convert' => '单位换算',
@@ -3656,6 +3924,9 @@ class AiToolExecutor {
       case 'unit_convert':
         return '${args['quantity'] ?? ''} ${args['from_unit'] ?? ''} → '
             '${args['to_unit'] ?? ''}';
+      case 'build_report_draft':
+        final rows = args['rows'];
+        return rows is List ? '${rows.length} 行' : '汇总本机数据';
       case 'export_report':
         return '${args['template'] ?? '报表'}';
       case 'restore_records':
@@ -3828,6 +4099,9 @@ class AiToolExecutor {
       case 'restore_records':
         final n = json['restoredCount'] ?? json['affectedCount'];
         return n is int ? '恢复 $n 条' : (json['message'] as String? ?? '已恢复');
+      case 'build_report_draft':
+        final rows = json['rowCount'];
+        return rows is int ? '报表 $rows 行 · ${json['totalText'] ?? ''}' : '报表已生成';
       case 'export_report':
         return '已生成报表，点下方按钮打开';
       case 'plan_task':
