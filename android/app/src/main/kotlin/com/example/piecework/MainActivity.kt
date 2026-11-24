@@ -26,28 +26,24 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     private val channelName = "piecework/public_storage"
+    private val requestPickFolder = 4711
+    private var pendingPick: MethodChannel.Result? = null
 
-    /** 用 PackageInstaller 安装下载好的 APK（Android 7+ 不能再用 file:// 直接装） */
+    /**
+     * 安装下载好的 APK。
+     *
+     * 以前先查 canRequestPackageInstalls() 再装 —— 有些 ROM 这个查询和实际开关
+     * 不同步，用户明明开了还一直被拦。现在改成**直接装**：
+     * 真被拦时系统会抛 SecurityException，再把「去允许」的提示抛给 Dart。
+     */
     private fun installApk(path: String, result: MethodChannel.Result) {
+        val file = java.io.File(path)
+        if (path.isEmpty() || !file.exists()) {
+            result.error("missing", "安装包不存在", null)
+            return
+        }
+        // 先试 PackageInstaller（现代方式）
         try {
-            val file = java.io.File(path)
-            if (path.isEmpty() || !file.exists()) {
-                result.error("missing", "APK 不存在：$path", null)
-                return
-            }
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
-                !packageManager.canRequestPackageInstalls()
-            ) {
-                // 先去让用户允许「安装未知应用」
-                startActivity(
-                    android.content.Intent(
-                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        android.net.Uri.parse("package:$packageName"),
-                    ),
-                )
-                result.error("need_permission", "请允许「安装未知应用」后再点一次更新", null)
-                return
-            }
             val params = android.content.pm.PackageInstaller.SessionParams(
                 android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL,
             )
@@ -72,12 +68,48 @@ class MainActivity : FlutterActivity() {
                 session.commit(pi.intentSender)
             }
             result.success(true)
+            return
+        } catch (e: SecurityException) {
+            // 未知来源被禁 → 交给下面的 Intent 方式再试一次
         } catch (e: Exception) {
-            result.error("install_failed", e.message, null)
+            // 有些 ROM 的 PackageInstaller 直接不可用，换 Intent 方式
+        }
+
+        // 再试 Intent + FileProvider（兼容性更好）
+        try {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                file,
+            )
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            result.success(true)
+        } catch (e: SecurityException) {
+            result.error("need_permission", "需要允许安装未知应用", null)
+        } catch (e: Exception) {
+            result.error("install_failed", e.message ?: "安装失败", null)
         }
     }
-    private val requestPickFolder = 4711
-    private var pendingPick: MethodChannel.Result? = null
+
+    /** 打开「安装未知应用」设置页（Dart 侧按钮用） */
+    private fun openInstallSettings(result: MethodChannel.Result) {
+        try {
+            startActivity(
+                android.content.Intent(
+                    android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    android.net.Uri.parse("package:$packageName"),
+                ),
+            )
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("no_settings", e.message, null)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -90,6 +122,7 @@ class MainActivity : FlutterActivity() {
                             // 应用内自动更新：把下载好的 APK 交给系统安装器
                             installApk(call.argument<String>("path") ?: "", result)
                         }
+                        "openInstallSettings" -> openInstallSettings(result)
                         "openUrl" -> {
                             // 用系统浏览器打开链接（更新下载 / 项目主页）
                             val url = call.argument<String>("url") ?: ""

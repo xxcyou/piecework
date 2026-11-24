@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2008,
-    "versionName": "1.0.7",
+    "versionCode": 2009,
+    "versionName": "1.0.8",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 首次引导重做：先设数据安全（加密备份），再填身份卡；不再一进来弹恢复数据\n· 文案精简\n· 应用内自动更新（下载后直接调起安装）",
+    "notes": "· 修安装被拦：不再预检查询（部分 ROM 查不准），直接装；失败自动换系统安装器\n· 首次引导重做：先设加密备份，再填身份卡\n· 文案精简",
     "force": false
   }
 }

@@ -258,7 +258,8 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
   }
 
   final needPerm = result.message.contains('安装未知应用') ||
-      result.message.contains('need_permission');
+      result.message.contains('need_permission') ||
+      result.message.toLowerCase().contains('unknown sources');
   final retry = await showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -272,14 +273,22 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
           onPressed: () => Navigator.of(ctx).pop('browser'),
           child: const Text('浏览器下载'),
         ),
-        FilledButton(
-          onPressed: () => Navigator.of(ctx).pop('ok'),
-          child: const Text('知道了'),
-        ),
+        if (needPerm)
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop('settings'),
+            child: const Text('去允许'),
+          )
+        else
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop('ok'),
+            child: const Text('知道了'),
+          ),
       ],
     ),
   );
   if (retry == 'browser') {
     await UrlOpener.open(accelerateUrl(r.apkUrl));
+  } else if (retry == 'settings') {
+    await UpdateInstaller.instance.openInstallSettings();
   }
 }

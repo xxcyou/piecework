@@ -64,6 +64,17 @@ class UpdateInstaller {
     }
   }
 
+  /// 打开「安装未知应用」设置页
+  Future<bool> openInstallSettings() async {
+    try {
+      final ok =
+          await _ch.invokeMethod<bool>('openInstallSettings', const <String, dynamic>{});
+      return ok ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// 调起系统安装器；返回 (成功?, 错误信息)
   Future<({bool ok, String message})> install(String apkPath) async {
     try {
