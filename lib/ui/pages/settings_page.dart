@@ -390,10 +390,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 scheme,
                 icon: Icons.badge_outlined,
                 title: '身份卡（多人管理）',
-                subtitle: '每个人一张卡，记录/报表/AI 全部隔离',
-                onTap: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(builder: (_) => const ProfilesPage()),
-                ),
+                subtitle: activated
+                    ? '每个人一张卡，记录/报表/AI 全部隔离'
+                    : '未激活 · 激活后可用',
+                onTap: () {
+                  if (!activated) {
+                    showNeedActivation(context, ref, feature: '多身份管理');
+                    return;
+                  }
+                  Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                        builder: (_) => const ProfilesPage()),
+                  );
+                },
               ),
               _tile(
                 scheme,

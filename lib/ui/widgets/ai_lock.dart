@@ -107,16 +107,6 @@ class AiLockOverlay extends ConsumerWidget {
                       child: const Text('输入激活码'),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => showHowToGetDialog(context),
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(0, 32),
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      textStyle: const TextStyle(fontSize: 11.5),
-                      foregroundColor: scheme.onSurfaceVariant,
-                    ),
-                    child: const Text('怎么获取？'),
-                  ),
                 ],
               ),
             ),
@@ -253,28 +243,28 @@ Future<void> showActivationDialog(BuildContext context, WidgetRef ref) {
   );
 }
 
-/// 「怎么获取」：加微信
-Future<void> showHowToGetDialog(BuildContext context) {
+/// 某个付费功能没激活时的统一提示
+Future<void> showNeedActivation(
+  BuildContext context,
+  WidgetRef ref, {
+  required String feature,
+}) {
   return showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('获取激活码', style: TextStyle(fontSize: 15)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const Text('扫码加微信，把设备码发过来',
-              style: TextStyle(fontSize: 12.5)),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.asset('assets/wechat_qr.png', width: 200),
-          ),
-        ],
-      ),
+      title: Text('$feature 未激活', style: const TextStyle(fontSize: 15)),
+      content: const Text('激活后可用。', style: TextStyle(fontSize: 12.5)),
       actions: <Widget>[
-        FilledButton(
+        TextButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('知道了'),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.of(ctx).pop();
+            showActivationDialog(context, ref);
+          },
+          child: const Text('输入激活码'),
         ),
       ],
     ),

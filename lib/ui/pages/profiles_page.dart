@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/profile.dart';
 import '../../providers/chat_providers.dart';
 import '../../providers/db_providers.dart';
+import '../../providers/license_providers.dart';
 import '../../providers/profile_providers.dart';
 import '../../providers/records_providers.dart';
+import '../widgets/ai_lock.dart';
 import '../widgets/avatar_picker.dart';
 
 /// 身份卡管理：新建 / 改名 / 改颜色 / 归档 / 删除
@@ -141,6 +143,30 @@ class _ProfilesPageState extends ConsumerState<ProfilesPage> {
     final scheme = Theme.of(context).colorScheme;
     final async = ref.watch(profilesProvider);
     final activeId = ref.watch(activeProfileIdProvider);
+    final activated = ref.watch(aiActivatedProvider);
+
+    if (!activated) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('身份卡')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(Icons.lock_outline, size: 34, color: scheme.primary),
+              const SizedBox(height: 10),
+              const Text('多身份管理未激活',
+                  style:
+                      TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 14),
+              FilledButton(
+                onPressed: () => showActivationDialog(context, ref),
+                child: const Text('输入激活码'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

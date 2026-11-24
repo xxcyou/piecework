@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2011,
-    "versionName": "1.1.0",
+    "versionCode": 2012,
+    "versionName": "1.1.1",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· AI 助手激活（设备绑定激活码）\n· 激活界面重做\n· 设置里能看到激活状态",
+    "notes": "· 多身份管理需要激活\n· 激活页去掉多余入口",
     "force": false
   }
 }

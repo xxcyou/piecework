@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/profile.dart';
 import '../../providers/chat_providers.dart';
 import '../../providers/db_providers.dart';
+import '../../providers/license_providers.dart';
 import '../../providers/profile_providers.dart';
 import '../../providers/records_providers.dart';
 import '../pages/profiles_page.dart';
+import 'ai_lock.dart';
 import '../../core/avatars.dart';
 
 /// 身份卡胶囊（列表页标题旁、AI 页顶部都用它）
@@ -59,6 +61,11 @@ class ProfileChip extends ConsumerWidget {
 
 /// 身份卡切换面板：列出现有身份 + 新建 + 管理
 Future<void> showProfileSwitcher(BuildContext context, WidgetRef ref) async {
+  // 多身份是付费功能：未激活直接拦
+  if (!ref.read(aiActivatedProvider)) {
+    await showNeedActivation(context, ref, feature: '多身份管理');
+    return;
+  }
   final scheme = Theme.of(context).colorScheme;
   final profiles = ref.read(profilesProvider).valueOrNull ?? const <Profile>[];
   final counts =
