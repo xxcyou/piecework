@@ -997,6 +997,47 @@ class AiTools {
     <String, dynamic>{
       'type': 'function',
       'function': <String, dynamic>{
+        'name': 'manage_profiles',
+        'description':
+            '管理身份卡（多人管理）：列出 / 新建 / 改名 / 切换 / 把当前身份的记录复制到另一个身份。'
+            '当前身份由界面决定；复制记录是**新建副本**，原记录不动。'
+            '用户说「给张三也记一份」「新建一个李四的身份卡」时用。',
+        'parameters': <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'action': <String, dynamic>{
+              'type': 'string',
+              'enum': <String>['list', 'create', 'rename', 'switch', 'copy_records'],
+              'description': 'list=列身份卡；create=新建；rename=改名；'
+                  'switch=切换当前身份；copy_records=复制记录到别的身份',
+            },
+            'profile_id': <String, dynamic>{
+              'type': 'integer',
+              'description': '目标身份 id（rename/switch/copy_records 用；先 list 拿 id）',
+            },
+            'name': <String, dynamic>{
+              'type': 'string',
+              'description': '身份卡名字（create/rename 用）',
+            },
+            'avatar': <String, dynamic>{
+              'type': 'string',
+              'description': '头像 emoji（可选，例如 👷 🐱），不填用名字首字',
+            },
+            'record_ids': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'integer'},
+              'description': '要复制哪些记录（先 query_records 拿 id）；'
+                  '不填则按下面的筛选条件挑',
+            },
+            ..._filterProps,
+          },
+          'required': <String>['action'],
+        },
+      },
+    },
+    <String, dynamic>{
+      'type': 'function',
+      'function': <String, dynamic>{
         'name': 'run_terminal',
         'description':
             '执行一条 shell 命令，返回 exitCode / stdout / stderr。'
@@ -1346,6 +1387,8 @@ class AiToolExecutor {
         return _findDuplicates(args);
       case 'check_anomalies':
         return _checkAnomalies(args);
+      case 'manage_profiles':
+        return _manageProfiles(args);
       case 'show_photos':
         return _showPhotos(args);
       case 'run_terminal':
@@ -2477,6 +2520,122 @@ class AiToolExecutor {
     }
   }
 
+  // ───────────────────────── 身份卡 ─────────────────────────
+
+  Future<ToolOutcome> _manageProfiles(Map<String, dynamic> args) async {
+    final action = (args['action'] as String?) ?? 'list';
+
+    if (action == 'list') {
+      final list = await host.listProfiles();
+      return ToolOutcome(
+        json: <String, dynamic>{
+          'ok': true,
+          'current': profileName,
+          'profiles': list,
+          'note': '记录/报表/AI 都按身份隔离；切换后你只看到那个身份的数据。',
+        },
+      );
+    }
+
+    if (action == 'create') {
+      final name = (args['name'] as String?)?.trim() ?? '';
+      if (name.isEmpty) {
+        return ToolOutcome(
+          json: <String, dynamic>{'ok': false, 'error': 'create 需要 name'},
+        );
+      }
+      final avatar = (args['avatar'] as String?)?.trim() ?? '';
+      final id = await host.createProfile(name, avatar: avatar);
+      return ToolOutcome(
+        json: <String, dynamic>{
+          'ok': true,
+          'id': id,
+          'name': name,
+          'message': '身份卡已创建（还没切换过去；要录到它名下请先 switch）',
+        },
+      );
+    }
+
+    if (action == 'rename') {
+      final id = _optInt(args['profile_id']);
+      final name = (args['name'] as String?)?.trim() ?? '';
+      if (id == null || name.isEmpty) {
+        return ToolOutcome(
+          json: <String, dynamic>{
+            'ok': false,
+            'error': 'rename 需要 profile_id 和 name',
+          },
+        );
+      }
+      await host.renameProfile(id, name);
+      return ToolOutcome(
+        json: <String, dynamic>{'ok': true, 'id': id, 'name': name},
+      );
+    }
+
+    if (action == 'switch') {
+      final id = _optInt(args['profile_id']);
+      if (id == null) {
+        return ToolOutcome(
+          json: <String, dynamic>{'ok': false, 'error': 'switch 需要 profile_id'},
+        );
+      }
+      await host.switchProfile(id);
+      return ToolOutcome(
+        json: <String, dynamic>{
+          'ok': true,
+          'switchedTo': id,
+          'message': '已切换身份卡；接下来的查询和新建都按这个身份算。',
+        },
+      );
+    }
+
+    if (action == 'copy_records') {
+      final target = _optInt(args['profile_id']);
+      if (target == null) {
+        return ToolOutcome(
+          json: <String, dynamic>{
+            'ok': false,
+            'error': 'copy_records 需要 profile_id（目标身份）',
+          },
+        );
+      }
+      final ids = <int>[
+        for (final v in (args['record_ids'] as List?) ?? const <dynamic>[])
+          if (v is num) v.toInt(),
+      ];
+      if (ids.isEmpty) {
+        // 没给 id 就按筛选条件挑（只在本身份范围内）
+        final filter = _filterFromArgs(args);
+        final converter = await _converter();
+        final picked =
+            QueryEngine.apply(records, filter, converter: converter).records;
+        ids.addAll(picked.map((r) => r.id));
+      }
+      if (ids.isEmpty) {
+        return ToolOutcome(
+          json: <String, dynamic>{
+            'ok': false,
+            'error': '没有要复制的记录（record_ids 为空，筛选也没命中）',
+          },
+        );
+      }
+      final n = await host.copyRecordsToProfile(ids, target);
+      return ToolOutcome(
+        json: <String, dynamic>{
+          'ok': true,
+          'copied': n,
+          'targetProfileId': target,
+          'message': '已在目标身份下新建 $n 条副本（原记录不动，图片共用同一份文件）',
+        },
+      );
+    }
+
+    return ToolOutcome(
+      json: <String, dynamic>{'ok': false, 'error': '不支持的 action：$action'},
+    );
+  }
+
   // ───────────────────────── show_photos ─────────────────────────
 
   /// 把图片以卡片形式展示（用户能直接看到图，AI 也能用编号精确引用）
@@ -3413,6 +3572,7 @@ class AiToolExecutor {
   }
 
   static String _toolLabel(String name) => switch (name) {
+        'manage_profiles' => '身份卡',
         'show_photos' => '展示图片',
         'run_terminal' => '执行命令',
         'query_records' => '查询记录',

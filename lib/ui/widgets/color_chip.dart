@@ -33,6 +33,11 @@ class ColorChip extends StatelessWidget {
     }
     final c = colorOfName(name);
     final fg = onColor(c);
+    // 认识的色名 → 实心；猜出来的（哈希/拆解）→ 半透明描边提示「这是估的」
+    final known = isKnownColorName(name);
+    final border = known
+        ? scheme.outlineVariant.withAlpha(120)
+        : scheme.onSurfaceVariant.withAlpha(90);
 
     if (!filled) {
       return Row(
@@ -56,9 +61,9 @@ class ColorChip extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: size * 0.55, vertical: 2),
       decoration: BoxDecoration(
-        color: c,
+        color: known ? c : c.withAlpha(215),
         borderRadius: BorderRadius.circular(size),
-        border: Border.all(color: scheme.outlineVariant.withAlpha(120)),
+        border: Border.all(color: border),
       ),
       child: Text(
         text,

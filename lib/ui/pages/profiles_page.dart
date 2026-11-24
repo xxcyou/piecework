@@ -6,7 +6,7 @@ import '../../providers/chat_providers.dart';
 import '../../providers/db_providers.dart';
 import '../../providers/profile_providers.dart';
 import '../../providers/records_providers.dart';
-import '../widgets/color_chip.dart';
+import '../widgets/avatar_picker.dart';
 
 /// 身份卡管理：新建 / 改名 / 改颜色 / 归档 / 删除
 class ProfilesPage extends ConsumerStatefulWidget {
@@ -34,7 +34,10 @@ class _ProfilesPageState extends ConsumerState<ProfilesPage> {
   Future<void> _create() async {
     final name = await _askName(title: '新建身份卡');
     if (name == null || name.trim().isEmpty) return;
-    final p = await ref.read(profileRepoProvider).create(name.trim());
+    final avatar = await pickAvatar(context);
+    final p = await ref
+        .read(profileRepoProvider)
+        .create(name.trim(), avatar: avatar ?? '');
     await _loadCounts();
     if (!mounted) return;
     await ref.read(chatProvider.notifier).switchProfileTo(p.id);
@@ -51,14 +54,11 @@ class _ProfilesPageState extends ConsumerState<ProfilesPage> {
   }
 
   Future<void> _editMeta(Profile p) async {
-    final color = await _askName(
-      title: '颜色名（例如 藏青 / 米白，留空不显示色块）',
-      initial: p.colorName,
-    );
-    if (color == null) return;
+    final avatar = await pickAvatar(context, current: p.avatar);
+    if (avatar == null) return;
     final note = await _askName(title: '备注（工种/工号，可留空）', initial: p.note);
     if (note == null) return;
-    p.colorName = color.trim();
+    p.avatar = avatar;
     p.note = note.trim();
     await ref.read(profileRepoProvider).update(p);
     _loadCounts();
@@ -181,7 +181,9 @@ class _ProfilesPageState extends ConsumerState<ProfilesPage> {
                     backgroundColor:
                         p.id == activeId ? scheme.primary : scheme.surfaceContainerHighest,
                     child: Text(
-                      p.name.isEmpty ? '?' : p.name.characters.first,
+                      p.avatar.isNotEmpty
+                          ? p.avatar
+                          : (p.name.isEmpty ? '?' : p.name.characters.first),
                       style: TextStyle(
                         fontSize: 13,
                         color: p.id == activeId ? Colors.white : scheme.onSurface,
@@ -191,9 +193,9 @@ class _ProfilesPageState extends ConsumerState<ProfilesPage> {
                   title: Row(
                     children: <Widget>[
                       Text(p.name, style: const TextStyle(fontSize: 13.5)),
-                      if (p.colorName.isNotEmpty) ...<Widget>[
-                        const SizedBox(width: 6),
-                        ColorChip(name: p.colorName, size: 9, filled: false),
+                      if (p.avatar.isNotEmpty) ...<Widget>[
+                        const SizedBox(width: 5),
+                        Text(p.avatar, style: const TextStyle(fontSize: 13)),
                       ],
                       if (p.isDefault) ...<Widget>[
                         const SizedBox(width: 6),
@@ -244,7 +246,7 @@ class _ProfilesPageState extends ConsumerState<ProfilesPage> {
                       const PopupMenuItem<String>(
                           value: 'rename', child: Text('改名')),
                       const PopupMenuItem<String>(
-                          value: 'meta', child: Text('颜色 / 备注')),
+                          value: 'meta', child: Text('头像 / 备注')),
                       PopupMenuItem<String>(
                           value: 'archive',
                           child: Text(p.archived ? '取消归档' : '归档')),

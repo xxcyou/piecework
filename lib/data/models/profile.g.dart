@@ -22,28 +22,33 @@ const ProfileSchema = CollectionSchema(
       name: r'archived',
       type: IsarType.bool,
     ),
-    r'colorName': PropertySchema(
+    r'avatar': PropertySchema(
       id: 1,
+      name: r'avatar',
+      type: IsarType.string,
+    ),
+    r'colorName': PropertySchema(
+      id: 2,
       name: r'colorName',
       type: IsarType.string,
     ),
     r'createdAt': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
     r'isDefault': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'isDefault',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'name',
       type: IsarType.string,
     ),
     r'note': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'note',
       type: IsarType.string,
     )
@@ -82,6 +87,7 @@ int _profileEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.avatar.length * 3;
   bytesCount += 3 + object.colorName.length * 3;
   bytesCount += 3 + object.name.length * 3;
   bytesCount += 3 + object.note.length * 3;
@@ -95,11 +101,12 @@ void _profileSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeBool(offsets[0], object.archived);
-  writer.writeString(offsets[1], object.colorName);
-  writer.writeDateTime(offsets[2], object.createdAt);
-  writer.writeBool(offsets[3], object.isDefault);
-  writer.writeString(offsets[4], object.name);
-  writer.writeString(offsets[5], object.note);
+  writer.writeString(offsets[1], object.avatar);
+  writer.writeString(offsets[2], object.colorName);
+  writer.writeDateTime(offsets[3], object.createdAt);
+  writer.writeBool(offsets[4], object.isDefault);
+  writer.writeString(offsets[5], object.name);
+  writer.writeString(offsets[6], object.note);
 }
 
 Profile _profileDeserialize(
@@ -110,12 +117,13 @@ Profile _profileDeserialize(
 ) {
   final object = Profile();
   object.archived = reader.readBool(offsets[0]);
-  object.colorName = reader.readString(offsets[1]);
-  object.createdAt = reader.readDateTime(offsets[2]);
+  object.avatar = reader.readString(offsets[1]);
+  object.colorName = reader.readString(offsets[2]);
+  object.createdAt = reader.readDateTime(offsets[3]);
   object.id = id;
-  object.isDefault = reader.readBool(offsets[3]);
-  object.name = reader.readString(offsets[4]);
-  object.note = reader.readString(offsets[5]);
+  object.isDefault = reader.readBool(offsets[4]);
+  object.name = reader.readString(offsets[5]);
+  object.note = reader.readString(offsets[6]);
   return object;
 }
 
@@ -131,12 +139,14 @@ P _profileDeserializeProp<P>(
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readDateTime(offset)) as P;
-    case 3:
-      return (reader.readBool(offset)) as P;
-    case 4:
       return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readDateTime(offset)) as P;
+    case 4:
+      return (reader.readBool(offset)) as P;
     case 5:
+      return (reader.readString(offset)) as P;
+    case 6:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -282,6 +292,136 @@ extension ProfileQueryFilter
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'archived',
         value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'avatar',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'avatar',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'avatar',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'avatar',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'avatar',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'avatar',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'avatar',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'avatar',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'avatar',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterFilterCondition> avatarIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'avatar',
+        value: '',
       ));
     });
   }
@@ -811,6 +951,18 @@ extension ProfileQuerySortBy on QueryBuilder<Profile, Profile, QSortBy> {
     });
   }
 
+  QueryBuilder<Profile, Profile, QAfterSortBy> sortByAvatar() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'avatar', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterSortBy> sortByAvatarDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'avatar', Sort.desc);
+    });
+  }
+
   QueryBuilder<Profile, Profile, QAfterSortBy> sortByColorName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'colorName', Sort.asc);
@@ -883,6 +1035,18 @@ extension ProfileQuerySortThenBy
   QueryBuilder<Profile, Profile, QAfterSortBy> thenByArchivedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'archived', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterSortBy> thenByAvatar() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'avatar', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Profile, Profile, QAfterSortBy> thenByAvatarDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'avatar', Sort.desc);
     });
   }
 
@@ -967,6 +1131,13 @@ extension ProfileQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Profile, Profile, QDistinct> distinctByAvatar(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'avatar', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Profile, Profile, QDistinct> distinctByColorName(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1012,6 +1183,12 @@ extension ProfileQueryProperty
   QueryBuilder<Profile, bool, QQueryOperations> archivedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'archived');
+    });
+  }
+
+  QueryBuilder<Profile, String, QQueryOperations> avatarProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'avatar');
     });
   }
 

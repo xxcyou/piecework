@@ -15,7 +15,10 @@ class Profile {
   @Index()
   late String name;
 
-  /// 颜色名（复用颜色表，列表里显示成色块）
+  /// 头像：一个 emoji（👷 🧑‍🏭 🐱 …），空 = 用名字首字
+  String avatar = '';
+
+  /// 兼容老字段：以前用颜色块，现在头像优先，颜色只做次要强调
   String colorName = '';
 
   /// 备注（工种、工号、电话…）

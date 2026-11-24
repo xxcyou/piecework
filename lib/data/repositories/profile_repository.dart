@@ -44,11 +44,13 @@ class ProfileRepository {
   Future<Profile> create(
     String name, {
     String colorName = '',
+    String avatar = '',
     String note = '',
   }) async {
     final p = Profile()
       ..name = name.trim().isEmpty ? '未命名' : name.trim()
       ..colorName = colorName
+      ..avatar = avatar
       ..note = note
       ..createdAt = DateTime.now();
     await _isar.writeTxn(() => _isar.profiles.put(p));

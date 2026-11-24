@@ -91,6 +91,54 @@ class FakeHost implements AiToolHost {
     return 'copied_$chatPhotoName';
   }
 
+  // ── 身份卡（测试桩）──
+  final List<Map<String, dynamic>> profiles = <Map<String, dynamic>>[
+    <String, dynamic>{
+      'id': 1,
+      'name': '我',
+      'avatar': '👷',
+      'records': 3,
+      'isDefault': true,
+      'isActive': true,
+      'archived': false,
+    },
+    <String, dynamic>{
+      'id': 2,
+      'name': '张三',
+      'avatar': '🐱',
+      'records': 1,
+      'isDefault': false,
+      'isActive': false,
+      'archived': false,
+    },
+  ];
+  final List<String> profileLog = <String>[];
+
+  @override
+  Future<List<Map<String, dynamic>>> listProfiles() async => profiles;
+
+  @override
+  Future<int> createProfile(String name, {String avatar = ''}) async {
+    profileLog.add('create:$name:$avatar');
+    return 9;
+  }
+
+  @override
+  Future<void> renameProfile(int id, String name) async {
+    profileLog.add('rename:$id:$name');
+  }
+
+  @override
+  Future<void> switchProfile(int id) async {
+    profileLog.add('switch:$id');
+  }
+
+  @override
+  Future<int> copyRecordsToProfile(List<int> ids, int targetProfileId) async {
+    profileLog.add('copy:${ids.join(",")}->$targetProfileId');
+    return ids.length;
+  }
+
   final List<OperationLog> ops = <OperationLog>[];
   final List<PieceRecord> deletedList = <PieceRecord>[];
 

@@ -7,7 +7,7 @@ import '../../providers/db_providers.dart';
 import '../../providers/profile_providers.dart';
 import '../../providers/records_providers.dart';
 import '../pages/profiles_page.dart';
-import 'color_chip.dart';
+import '../../core/avatars.dart';
 
 /// 身份卡胶囊（列表页标题旁、AI 页顶部都用它）
 class ProfileChip extends ConsumerWidget {
@@ -21,7 +21,7 @@ class ProfileChip extends ConsumerWidget {
     final p = ref.watch(activeProfileProvider);
     final name = (p?.name ?? '').trim();
     if (name.isEmpty) return const SizedBox.shrink();
-    final color = p?.colorName ?? '';
+    final avatar = p?.avatar ?? '';
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap ?? () => showProfileSwitcher(context, ref),
@@ -35,10 +35,11 @@ class ProfileChip extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            if (color.isNotEmpty) ...<Widget>[
-              ColorChip(name: color, size: 9, filled: false),
-              const SizedBox(width: 4),
-            ],
+            Text(
+              avatar.isNotEmpty ? avatar : avatarFallback(name),
+              style: const TextStyle(fontSize: 13),
+            ),
+            const SizedBox(width: 4),
             Text(
               name,
               style: const TextStyle(
@@ -90,19 +91,25 @@ Future<void> showProfileSwitcher(BuildContext context, WidgetRef ref) async {
           ),
           for (final p in profiles)
             ListTile(
-              leading: Icon(
-                p.id == activeId
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-                size: 20,
-                color: p.id == activeId ? scheme.primary : scheme.outline,
+              leading: CircleAvatar(
+                radius: 15,
+                backgroundColor: p.id == activeId
+                    ? scheme.primary
+                    : scheme.surfaceContainerHighest,
+                child: Text(
+                  p.avatar.isNotEmpty ? p.avatar : avatarFallback(p.name),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: p.id == activeId ? Colors.white : scheme.onSurface,
+                  ),
+                ),
               ),
               title: Row(
                 children: <Widget>[
                   Text(p.name, style: const TextStyle(fontSize: 13.5)),
-                  if (p.colorName.isNotEmpty) ...<Widget>[
-                    const SizedBox(width: 6),
-                    ColorChip(name: p.colorName, size: 9, filled: false),
+                  if (p.avatar.isNotEmpty) ...<Widget>[
+                    const SizedBox(width: 5),
+                    Text(p.avatar, style: const TextStyle(fontSize: 13)),
                   ],
                   if (p.isDefault) ...<Widget>[
                     const SizedBox(width: 6),

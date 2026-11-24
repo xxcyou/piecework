@@ -1017,6 +1017,70 @@ class _ChatToolHost implements AiToolHost {
   Future<String?> copyChatPhotoToRecords(String chatPhotoName) =>
       PhotoService.instance.copyToRecords(chatPhotoName);
 
+  // ── 身份卡 ──
+  @override
+  Future<List<Map<String, dynamic>>> listProfiles() async {
+    final repo = ref.read(profileRepoProvider);
+    final list = await repo.all(includeArchived: true);
+    final counts = await repo.recordCounts();
+    final activeId = ref.read(activeProfileIdProvider);
+    return <Map<String, dynamic>>[
+      for (final p in list)
+        <String, dynamic>{
+          'id': p.id,
+          'name': p.name,
+          'avatar': p.avatar,
+          'records': counts[p.id] ?? 0,
+          'isDefault': p.isDefault,
+          'isActive': p.id == activeId,
+          'archived': p.archived,
+        },
+    ];
+  }
+
+  @override
+  Future<int> createProfile(String name, {String avatar = ''}) async {
+    final p = await ref.read(profileRepoProvider).create(name, avatar: avatar);
+    return p.id;
+  }
+
+  @override
+  Future<void> renameProfile(int id, String name) async {
+    final repo = ref.read(profileRepoProvider);
+    final p = await repo.byId(id);
+    if (p == null) return;
+    p.name = name.trim().isEmpty ? p.name : name.trim();
+    await repo.update(p);
+  }
+
+  @override
+  Future<void> switchProfile(int id) async {
+    await ref.read(chatProvider.notifier).switchProfileTo(id);
+    ref.invalidate(recordsProvider);
+  }
+
+  @override
+  Future<int> copyRecordsToProfile(
+    List<int> recordIds,
+    int targetProfileId,
+  ) async {
+    final repo = ref.read(recordRepoProvider);
+    var n = 0;
+    for (final id in recordIds) {
+      final src = await repo.byId(id);
+      if (src == null) continue;
+      final copy = RecordCodec.fromJson(RecordCodec.toJson(src));
+      copy.id = Isar.autoIncrement;
+      copy.profileId = targetProfileId;
+      copy.updatedAt = DateTime.now();
+      copy.deletedAt = null;
+      await repo.save(copy);
+      n++;
+    }
+    if (n > 0) ref.invalidate(recordsProvider);
+    return n;
+  }
+
   @override
   Future<List<OperationLog>> loadOperations({int limit = 10}) =>
       ref.read(opLogRepoProvider).recent(limit: limit);

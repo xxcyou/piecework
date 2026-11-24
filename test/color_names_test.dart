@@ -15,11 +15,15 @@ void main() {
 
     test('包含匹配：「深藏青」「黑灰色」', () {
       expect(hasSwatch('深藏青'), isTrue);
-      expect(colorOfName('黑灰色'), const Color(0xFF1C1F24));
+      expect(isKnownColorName('深藏青'), isTrue);
+      // 「黑灰色」按更长的键「灰色」识别（比单字「黑」更贴切）
+      expect(isKnownColorName('黑灰色'), isTrue);
+      expect(colorOfName('黑灰色'), isNot(const Color(0xFF1C1F24)));
     });
 
-    test('不认识的词不画色块', () {
-      expect(hasSwatch('乱七八糟色'), isFalse);
+    test('不认识的词也会有色块（猜的，用稳定哈希色）', () {
+      expect(hasSwatch('乱七八糟色'), isTrue);
+      expect(isKnownColorName('乱七八糟色'), isFalse);
       expect(hasSwatch(''), isFalse);
     });
   });
@@ -39,14 +43,17 @@ void main() {
   });
 
   group('取色反推颜色名', () {
-    test('纯黑 → 黑色系', () {
+    test('纯黑 → 黑色系（可能带「深」）', () {
       final n = nameOfColor(const Color(0xFF141518));
-      expect(n, anyOf('黑色', '深灰', '藏青', '咖啡', '酒红', '墨绿', '紫色'));
+      expect(
+        n.replaceAll('深', ''),
+        anyOf('黑色', '灰色', '藏青', '咖啡', '酒红', '墨绿', '紫色'),
+      );
     });
 
-    test('纯白 → 白/米白系', () {
+    test('纯白 → 白/米白系（可能带「浅」修饰）', () {
       final n = nameOfColor(const Color(0xFFFAFAFA));
-      expect(n, anyOf('白色', '米白'));
+      expect(n.replaceAll('浅', ''), anyOf('白色', '米白'));
     });
 
     test('正红 → 红/酒红', () {
@@ -72,7 +79,7 @@ void main() {
       expect(text.style?.color, Colors.white);
     });
 
-    testWidgets('不认识的词只显示文字', (tester) async {
+    testWidgets('不认识的词也渲染（猜色 + 名字）', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(body: Center(child: ColorChip(name: '神秘色'))),

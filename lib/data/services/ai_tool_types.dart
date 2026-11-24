@@ -317,6 +317,21 @@ abstract class AiToolHost {
   /// 关联图片靠它 —— 记录只能引用 photos/ 下的文件。
   Future<String?> copyChatPhotoToRecords(String chatPhotoName);
 
+  // ── 身份卡（多人管理）──
+  /// 列出身份卡：[{id,name,avatar,records,isDefault,isActive}]
+  Future<List<Map<String, dynamic>>> listProfiles();
+
+  /// 新建身份卡，返回新 id
+  Future<int> createProfile(String name, {String avatar});
+
+  Future<void> renameProfile(int id, String name);
+
+  /// 切换当前身份卡
+  Future<void> switchProfile(int id);
+
+  /// 把记录复制到另一个身份（新建副本，原记录不动），返回复制条数
+  Future<int> copyRecordsToProfile(List<int> recordIds, int targetProfileId);
+
   /// 最近的操作日志（查历史 / 撤销用）
   Future<List<OperationLog>> loadOperations({int limit});
 
