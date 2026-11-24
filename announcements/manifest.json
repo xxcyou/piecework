@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2020,
-    "versionName": "1.1.9",
+    "versionCode": 2021,
+    "versionName": "1.2.0",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 安装逻辑改成通用三条路（任何机型都能装）",
+    "notes": "· 安装通用化验证",
     "force": false
   }
 }
