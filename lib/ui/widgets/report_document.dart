@@ -53,7 +53,7 @@ class ReportDocument extends ConsumerWidget {
   /// 身份卡名字（报表标题下方显示，方便对账看单）
   final String profileName;
 
-  /// 工资模式：同款汇总成「工资卡」，不带日期明细
+  /// 财务模式：同款汇总成「工资卡」，不带日期明细
   final bool salaryMode;
 
   int get _totalMilli => records.fold(0, (a, r) => a + r.subtotalMilli);
@@ -154,7 +154,7 @@ class ReportDocument extends ConsumerWidget {
               children: <Widget>[
                 Expanded(
                   flex: 5,
-                  child: Text('款号 / 颜色 / 码数',
+                  child: Text('型号',
                       style: TextStyle(
                           fontSize: 10.5 * k,
                           fontWeight: FontWeight.w700,
@@ -209,7 +209,7 @@ class ReportDocument extends ConsumerWidget {
                   SizedBox(
                     width: 62 * k,
                     child: Text(
-                      g.unit == converter.baseUnit
+                      !g.mixedUnits
                           ? '${g.qty}'
                           : '${(g.centiBase / 100).toStringAsFixed(2)}',
                       textAlign: TextAlign.right,
@@ -219,9 +219,11 @@ class ReportDocument extends ConsumerWidget {
                   SizedBox(
                     width: 56 * k,
                     child: Text(
-                      g.unitPrice == 0
-                          ? '—'
-                          : Money.plain(Money.toMilli(g.unitPrice)),
+                      g.singlePrice == null
+                          ? '不一'
+                          : (g.singlePrice == 0
+                              ? '—'
+                              : Money.plain(Money.toMilli(g.singlePrice!))),
                       textAlign: TextAlign.right,
                       style: TextStyle(fontSize: 11.5 * k, color: _ink2),
                     ),

@@ -5,9 +5,9 @@ import '../../data/models/piece_record.dart';
 import '../../data/services/salary_summary.dart';
 import 'color_chip.dart';
 
-/// 工资模式的一行：同款汇总（型号·颜色·码数 / 数量 / 单价 / 金额）
+/// 财务模式的一行：同款汇总（型号·颜色·码数 / 数量 / 单价 / 金额）
 ///
-/// 不显示日期 —— 工资模式只看「做了多少、该拿多少钱」。
+/// 不显示日期 —— 财务模式只看「做了多少、该拿多少钱」。
 class SalaryGroupCard extends StatelessWidget {
   const SalaryGroupCard({
     super.key,
@@ -23,7 +23,7 @@ class SalaryGroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final mixed = group.unit != baseUnit;
+    final mixed = group.mixedUnits;
     return Material(
       color: scheme.surfaceContainerHighest.withAlpha(40),
       borderRadius: BorderRadius.circular(14),
@@ -38,31 +38,12 @@ class SalaryGroupCard extends StatelessWidget {
               Row(
                 children: <Widget>[
                   Expanded(
-                    child: Row(
-                      children: <Widget>[
-                        Flexible(
-                          child: Text(
-                            group.styleModel.isEmpty
-                                ? '（未填型号）'
-                                : group.styleModel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 14.5, fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        if (group.color.isNotEmpty) ...<Widget>[
-                          const SizedBox(width: 6),
-                          ColorChip(name: group.color, size: 9.5),
-                        ],
-                        if (group.size.isNotEmpty) ...<Widget>[
-                          const SizedBox(width: 6),
-                          Text(group.size,
-                              style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: scheme.onSurfaceVariant)),
-                        ],
-                      ],
+                    child: Text(
+                      group.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700),
                     ),
                   ),
                   Text(
@@ -81,13 +62,17 @@ class SalaryGroupCard extends StatelessWidget {
                   Text(
                     mixed
                         ? '${(group.centiBase / 100).toStringAsFixed(2)} $baseUnit（折算）'
-                        : '${group.qty} ${group.unit}',
+                        : '${group.qty} ${group.units.isEmpty ? '' : group.units.first}',
                     style: const TextStyle(fontSize: 12.5),
                   ),
                   const SizedBox(width: 8),
-                  Text('× ${Money.plain(Money.toMilli(group.unitPrice))}',
-                      style: TextStyle(
-                          fontSize: 11.5, color: scheme.onSurfaceVariant)),
+                  Text(
+                    group.singlePrice == null
+                        ? '单价不一'
+                        : '× ${Money.plain(Money.toMilli(group.singlePrice!))}',
+                    style: TextStyle(
+                        fontSize: 11.5, color: scheme.onSurfaceVariant),
+                  ),
                   const Spacer(),
                   Text('${group.count} 条',
                       style: TextStyle(
@@ -123,7 +108,8 @@ Future<void> showSalaryGroupDetail(
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(
-            '共 ${group.count} 条 · 合计 ${group.qty} ${group.unit} · '
+            '共 ${group.count} 条 · 合计 ${group.mixedUnits ? '${(group.centiBase / 100).toStringAsFixed(2)}' : group.qty} '
+            '${group.mixedUnits ? '' : (group.units.isEmpty ? '' : group.units.first)} · '
             '${Money.format(group.amountMilli)}',
             style: const TextStyle(fontSize: 11.5),
           ),
@@ -135,8 +121,13 @@ Future<void> showSalaryGroupDetail(
                 children: <Widget>[
                   Expanded(
                     child: Text(
-                      '${r.quantity} ${r.unitOrBase}'
-                      '${r.note.isEmpty ? '' : ' · ${r.note}'}',
+                      '${<String>[
+                        if (r.color.isNotEmpty) r.color,
+                        if (r.size.isNotEmpty) r.size,
+                        if (r.note.isNotEmpty) r.note,
+                      ].join(' · ')}'
+                      '${r.color.isEmpty && r.size.isEmpty && r.note.isEmpty ? '' : '  '}'
+                      '${r.quantity} ${r.unitOrBase}',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -151,7 +142,7 @@ Future<void> showSalaryGroupDetail(
   );
 }
 
-/// 工资模式列表头部：一条总账
+/// 财务模式列表头部：一条总账
 class SalaryTotalBar extends StatelessWidget {
   const SalaryTotalBar({
     super.key,

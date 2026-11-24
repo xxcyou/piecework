@@ -4,7 +4,7 @@ import 'package:piecework/data/models/unit_rule.dart';
 import 'package:piecework/data/services/salary_summary.dart';
 import 'package:piecework/data/services/unit_converter.dart';
 
-/// 工资模式：同款自动汇总
+/// 财务模式：同款自动汇总
 void main() {
   PieceRecord rec({
     required int qty,
@@ -28,34 +28,39 @@ void main() {
 
   UnitConverter conv() => UnitConverter(baseUnit: '件', rules: <UnitRule>[]);
 
-  test('同款合并成一行，数量金额相加', () {
+  test('同一型号合并成一行（颜色/码数/备注都不管）', () {
     final g = groupSalary(<PieceRecord>[
-      rec(qty: 100, price: 0.5, day: 1),
-      rec(qty: 50, price: 0.5, day: 3),
+      rec(qty: 100, price: 0.5, color: '黑', size: 'M', day: 1),
+      rec(qty: 50, price: 0.5, color: '白', size: 'L', day: 3),
     ], conv());
     expect(g.length, 1);
     expect(g.first.count, 2);
     expect(g.first.qty, 150);
     expect(g.first.amountMilli, 75000);
-    expect(g.first.label, 'A1 · 黑 · M');
+    expect(g.first.label, 'A1');
+    expect(g.first.singlePrice, 0.5);
   });
 
-  test('单价不同不合并（否则工资算错）', () {
+  test('同型号单价不同也合并，单价显示「不一」', () {
     final g = groupSalary(<PieceRecord>[
       rec(qty: 100, price: 0.5),
       rec(qty: 100, price: 0.6),
     ], conv());
-    expect(g.length, 2);
+    expect(g.length, 1);
+    expect(g.first.count, 2);
+    expect(g.first.singlePrice, isNull);
+    expect(g.first.amountMilli, 110000); // 金额照样相加
   });
 
-  test('颜色/码数/型号不同都分开', () {
+  test('不同型号分开（颜色/码数不参与区分）', () {
     final g = groupSalary(<PieceRecord>[
-      rec(qty: 10, price: 1),
-      rec(qty: 10, price: 1, color: '白'),
-      rec(qty: 10, price: 1, size: 'L'),
+      rec(qty: 10, price: 1, style: 'A1'),
+      rec(qty: 10, price: 1, style: 'A1', color: '白', size: 'L'),
       rec(qty: 10, price: 1, style: 'B2'),
     ], conv());
-    expect(g.length, 4);
+    expect(g.length, 2);
+    final a1 = g.firstWhere((e) => e.label == 'A1');
+    expect(a1.count, 2);
   });
 
   test('按金额从大到小排（主要收入在前）', () {

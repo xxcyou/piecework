@@ -237,7 +237,7 @@ class RecordsPage extends ConsumerWidget {
                         : '点右下角「录入」，拍照登记第一条计件记录。',
                   );
                 }
-                // 工资模式：同款自动汇总（不显示日期，方便给员工看工资）
+                // 财务模式：同款自动汇总（不显示日期，方便给员工看工资）
                 if (salaryMode) {
                   final groups = groupSalary(result.records, converter);
                   var totalCenti = 0;

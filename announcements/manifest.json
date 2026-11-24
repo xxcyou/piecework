@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2023,
-    "versionName": "1.3.0",
+    "versionCode": 2025,
+    "versionName": "1.3.2",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 新增「工资模式」（默认）：同款自动汇总、不显示日期，报表是工资卡样式\n· 「会计模式」保留逐条明细，用来查数据\n· 报表标题下显示身份人名\n· 「上报」统一改叫「结算」",
+    "notes": "· 财务模式：只按型号汇总（颜色/码数/备注不参与），不显示日期\n· 审计模式：逐条明细\n· 模式改名：财务模式 / 审计模式",
     "force": false
   }
 }

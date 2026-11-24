@@ -356,8 +356,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 icon: Icons.tune,
                 title: '工作模式',
                 subtitle: workMode == 0
-                    ? '工资模式 · 同款自动汇总，给员工看工资'
-                    : '会计模式 · 逐条明细，用来查数据',
+                    ? '财务模式 · 按型号汇总，看总数和金额'
+                    : '审计模式 · 逐条明细，用来查数据',
                 trailing: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -366,7 +366,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    workMode == 0 ? '工资' : '会计',
+                    workMode == 0 ? '财务' : '审计',
                     style: TextStyle(fontSize: 10, color: scheme.primary),
                   ),
                 ),
@@ -654,8 +654,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 Navigator.of(ctx).pop();
                 await setWorkMode(ref, 0);
               },
-              title: const Text('工资模式', style: TextStyle(fontSize: 13.5)),
-              subtitle: const Text('同款自动汇总，不显示日期；报表是工资卡样式',
+              title: const Text('财务模式', style: TextStyle(fontSize: 13.5)),
+              subtitle: const Text('按型号汇总、不显示日期；报表是工资卡样式',
                   style: TextStyle(fontSize: 10.5)),
             ),
             RadioListTile<int>(
@@ -665,7 +665,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 Navigator.of(ctx).pop();
                 await setWorkMode(ref, 1);
               },
-              title: const Text('会计模式', style: TextStyle(fontSize: 13.5)),
+              title: const Text('审计模式', style: TextStyle(fontSize: 13.5)),
               subtitle: const Text('逐条明细 + 日期，用来查数据',
                   style: TextStyle(fontSize: 10.5)),
             ),
