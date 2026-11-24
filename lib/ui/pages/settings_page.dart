@@ -16,8 +16,10 @@ import '../../providers/db_providers.dart';
 import '../../providers/options_providers.dart';
 import '../../providers/presets_providers.dart';
 import '../../providers/records_providers.dart';
+import '../../providers/license_providers.dart';
 import '../../providers/settings_providers.dart';
 import '../../providers/ui_providers.dart';
+import '../widgets/ai_lock.dart';
 import 'ai_settings_page.dart';
 import 'about_page.dart';
 import 'gallery_page.dart';
@@ -230,6 +232,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final activated = ref.watch(aiActivatedProvider);
     final settings = ref.watch(settingsProvider).valueOrNull;
     final aiConfig = ref.watch(aiConfigProvider);
     final scheme = Theme.of(context).colorScheme;
@@ -345,6 +348,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 title: '从备份恢复',
                 subtitle: '选择之前导出的 .zip 文件',
                 onTap: _restore,
+              ),
+              _tile(
+                scheme,
+                icon: Icons.workspace_premium_outlined,
+                title: 'AI 激活',
+                subtitle: activated ? '已激活' : '未激活 · 点这里输入激活码',
+                trailing: activated
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: scheme.primary.withAlpha(22),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(Icons.verified_rounded,
+                                size: 12, color: scheme.primary),
+                            const SizedBox(width: 3),
+                            Text('已激活',
+                                style: TextStyle(
+                                    fontSize: 9.5, color: scheme.primary)),
+                          ],
+                        ),
+                      )
+                    : null,
+                onTap: () => showActivationDialog(context, ref),
               ),
               _tile(
                 scheme,
@@ -572,6 +603,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     required String title,
     required String subtitle,
     VoidCallback? onTap,
+    Widget? trailing,
     bool danger = false,
   }) {
     final color = danger ? scheme.error : scheme.onSurface;
