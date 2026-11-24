@@ -115,6 +115,7 @@ class AiReply {
     this.calcs = const <CalcTable>[],
     this.codes = const <CodeBlock>[],
     this.photoGroups = const <List<Map<String, dynamic>>>[],
+    this.reportDrafts = const <Map<String, dynamic>>[],
     this.reasoning = '',
     this.numberWarning,
     this.promptTokens = 0,
@@ -164,6 +165,9 @@ class AiReply {
   final List<CalcTable> calcs;
   final List<CodeBlock> codes;
   final List<List<Map<String, dynamic>>> photoGroups;
+
+  /// AI 生成的报表草稿（可点开查看/导出，不写库）
+  final List<Map<String, dynamic>> reportDrafts;
 
   /// 模型思考过程（reasoning_content / reasoning）
   final String reasoning;
@@ -320,6 +324,12 @@ class AiService {
   用 `@工具名` 直接调工具；
 - 用户在终端里跑出结果后贴给你看，直接基于那些数字回答，不要再自己查一遍；
 - 不要把终端说成「另一个 AI」或「外部程序」——它是这个 App 自带的。
+
+【算数必须用计算器（硬规则）】
+- 任何加 / 减 / 乘 / 除 / 合计 / 单价×数量 / 跨单位折算，**必须调用 `calculator`**；
+- 回答里的数字只能**逐字引用** `calculator` 返回的 text，不许自己心算；
+- 一次可以传多条算式（例如 ["200+200","410+340","750*0.6","400*0.5+750*0.6"]）；
+- 用户问「一共多少钱」时，金额也要用计算器算，别用脑子估。
 
 【工作模式】
 - `financial` 财务模式（默认）：列表/报表按**型号**汇总、不显示日期，给员工看工资；
@@ -589,6 +599,9 @@ class AiService {
     final svgs = <SvgBlock>[];
     final calcs = <CalcTable>[];
     final codes = <CodeBlock>[];
+    final reportDrafts = <Map<String, dynamic>>[];
+    // 计算器给过的数字：回答里的金额只能来自这里
+    final calcTexts = <String>[];
     final photoGroups = <List<Map<String, dynamic>>>[];
     AgentTask? lastTask;
     AskPrompt? lastAsk;
@@ -805,11 +818,26 @@ class AiService {
             promptTokens: promptTokens,
             completionTokens: completionTokens,
             totalTokens: totalTokens,
+            reportDrafts: reportDrafts,
           );
         }
 
         if (outcome.svg != null) svgs.add(outcome.svg!);
         if (outcome.calc != null) calcs.add(outcome.calc!);
+        if (outcome.reportDraft != null) {
+          reportDrafts.add(outcome.reportDraft!);
+        }
+        if (tc['function']?['name'] == 'calculator' ||
+            (tc['function'] is Map && tc['function']['name'] == 'calculator')) {
+          final rs = outcome.json['results'];
+          if (rs is List) {
+            for (final r in rs) {
+              if (r is Map && r['text'] != null) {
+                calcTexts.add('${r['expression']} = ${r['text']}');
+              }
+            }
+          }
+        }
         if (outcome.code != null) codes.add(outcome.code!);
         if (outcome.photos.isNotEmpty) photoGroups.add(outcome.photos);
 
@@ -821,11 +849,31 @@ class AiService {
       }
     }
 
+    // ── 数字核对：用了计算器就把结果钉在回答末尾，冲突时提示 ──
+    var finalText = lastContent;
+    var warning = '';
+    if (calcTexts.isNotEmpty) {
+      final verified = calcTexts.take(6).join(' · ');
+      finalText = '$finalText\n\n> 计算器核对：$verified';
+      // 正文里出现的「¥xxx / xxx 元」如果不在计算结果里，说明模型自己算过
+      final money = RegExp(r'[¥￥]\s?([0-9]+(?:\.[0-9]+)?)');
+      final known = calcTexts
+          .map((e) => e.split('=').last.trim())
+          .toSet();
+      for (final m in money.allMatches(lastContent)) {
+        final v = m.group(1)!;
+        if (!known.contains(v) && !known.contains('$v.0')) {
+          warning = '回答里的金额和计算器结果不一致，以末尾「计算器核对」为准。';
+          break;
+        }
+      }
+    }
+
     return AiReply(
       // 轮数用完时：有正文就照实返回（别丢掉已经做完的部分），
       // 没有正文才提示拆分
-      text: lastContent.isNotEmpty
-          ? lastContent
+      text: finalText.isNotEmpty
+          ? finalText
           : '这件事需要更多轮推理才做得完。可以拆成两三个小问题再问一次，'
               '我会接着做。',
       filter: lastFilter,
@@ -844,6 +892,8 @@ class AiService {
       calcs: calcs,
       codes: codes,
       photoGroups: photoGroups,
+      reportDrafts: reportDrafts,
+      numberWarning: warning.isEmpty ? null : warning,
       reasoning: reasoningBuf.toString(),
       promptTokens: promptTokens,
       completionTokens: completionTokens,

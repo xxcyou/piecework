@@ -435,7 +435,8 @@ ${line('本月', month)}
           reply.svgs.length > 1 ||
           reply.calcs.length > 1 ||
           reply.codes.length > 1 ||
-          reply.photoGroups.length > 1) {
+          reply.photoGroups.length > 1 ||
+          reply.reportDrafts.isNotEmpty) {
         aiMsg.toolsJson = jsonEncode(<String, dynamic>{
           if (reply.traces.isNotEmpty)
             'traces': reply.traces.map((t) => t.toJson()).toList(),
@@ -457,6 +458,8 @@ ${line('本月', month)}
             'codes': reply.codes.map((e) => e.toJson()).toList(),
           if (reply.photoGroups.length > 1)
             'photoGroups': reply.photoGroups,
+          if (reply.reportDrafts.isNotEmpty)
+            'reportDrafts': reply.reportDrafts,
         });
       }
       await repo.add(aiMsg);

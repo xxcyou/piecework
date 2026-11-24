@@ -17,6 +17,7 @@ import '../../data/models/operation_view.dart';
 import '../../data/services/record_codec.dart';
 import '../../providers/chat_providers.dart';
 import '../../providers/terminal_providers.dart';
+import '../pages/report_draft_page.dart';
 import '../pages/record_edit_page.dart';
 import 'photo_thumb.dart';
 import 'terminal_card.dart';
@@ -314,6 +315,7 @@ class AiMessageBubble extends ConsumerWidget {
                 (d) => _calcCard(context, ref, d)),
             ..._cards(context, ref, 'codes', 'code',
                 (d) => _codeCard(context, ref, d)),
+            ..._draftCards(context),
 
             _taskCard(context, ref),
             _askCard(context, ref),
@@ -508,6 +510,73 @@ class AiMessageBubble extends ConsumerWidget {
   }
 
   /// 计算过程表：把「怎么算出来的」摊开
+  /// 报表草稿卡：一行摘要 + 「查看报表」按钮（可导出图片）
+  List<Widget> _draftCards(BuildContext context) {
+    final raw = _toolsMap()?['reportDrafts'];
+    if (raw is! List || raw.isEmpty) return const <Widget>[];
+    final scheme = Theme.of(context).colorScheme;
+    return <Widget>[
+      for (final d in raw)
+        if (d is Map)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              decoration: BoxDecoration(
+                color: scheme.primary.withAlpha(12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: scheme.primary.withAlpha(45)),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(Icons.table_chart_outlined,
+                      size: 18, color: scheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          (d['title'] as String?) ?? '报表草稿',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12.5, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${(d['rows'] as List?)?.length ?? 0} 行 · '
+                          '合计 ${d['totalText'] ?? ''}',
+                          style: TextStyle(
+                              fontSize: 10.5,
+                              color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonal(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 32),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      textStyle: const TextStyle(fontSize: 11.5),
+                    ),
+                    onPressed: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ReportDraftPage(
+                          draft: d.map((k, v) => MapEntry('$k', v)),
+                        ),
+                      ),
+                    ),
+                    child: const Text('查看报表'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+    ];
+  }
+
   Widget _calcCard(BuildContext context, WidgetRef ref,
       [Map<String, dynamic>? data]) {
     final table = CalcTable.fromJson(data ?? _toolsMap()?['calc']);

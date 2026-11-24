@@ -6,7 +6,7 @@
 library;
 
 /// 版本名（给人看的）
-const String kAppVersionName = '1.4.0';
+const String kAppVersionName = '1.4.4';
 
 /// 版本号（给机器比的，必须单调递增）
 ///
@@ -14,7 +14,7 @@ const String kAppVersionName = '1.4.0';
 /// （armeabi-v7a +1000、arm64-v8a +2000、x86_64 +4000），所以手机里实际装上的
 /// versionCode 是 4001（arm64）。公告清单里的 versionCode 也用**基础号**比较，
 /// 这样无论用户装的是哪个 ABI 都能正确判断「有没有新版本」。
-const int kAppVersionCode = 2027;
+const int kAppVersionCode = 2031;
 
 /// 仓库（公告与更新清单都从这里取）
 const String kRepoOwner = 'xxcyou';
@@ -30,8 +30,14 @@ const String kGhProxy = 'https://gh.y4cc.cc/gh/';
 const String kProjectUrl = 'https://github.com/$kRepoOwner/$kRepoName';
 
 /// 原始清单地址（raw.githubusercontent）
-String get kManifestRawUrl =>
-    'https://raw.githubusercontent.com/$kRepoOwner/$kRepoName/master/$kManifestPath';
+///
+/// 末尾带时间戳：GitHub 的 CDN 会把清单缓存几分钟，
+/// 不带参数就会出现「刚发的新版，App 还说已是最新」。
+String get kManifestRawUrl {
+  final t = DateTime.now().millisecondsSinceEpoch ~/ 60000; // 分钟级即可
+  return 'https://raw.githubusercontent.com/$kRepoOwner/$kRepoName/master/'
+      '$kManifestPath?t=$t';
+}
 
 /// 加速后的清单地址
 String get kManifestAcceleratedUrl => '$kGhProxy$kManifestRawUrl';

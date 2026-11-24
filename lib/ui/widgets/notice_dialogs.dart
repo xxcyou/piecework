@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -186,6 +188,7 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
   final received = ValueNotifier<int>(0);
   final total = ValueNotifier<int>(0);
 
+  var cancelled = false;
   if (!context.mounted) return;
   showDialog<void>(
     context: context,
@@ -225,6 +228,16 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
             ),
           ],
         ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              cancelled = true;
+              UpdateInstaller.instance.cancel();
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('取消'),
+          ),
+        ],
       ),
     ),
   );
@@ -242,6 +255,17 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
     err = '$e';
   }
 
+  if (cancelled) {
+    // 用户主动取消：清掉半截文件，静默返回
+    try {
+      final f = File(path ?? '');
+      if (await f.exists()) await f.delete();
+    } catch (_) {}
+    progress.dispose();
+    received.dispose();
+    total.dispose();
+    return;
+  }
   if (!context.mounted) return;
   Navigator.of(context, rootNavigator: true).pop();
   progress.dispose();

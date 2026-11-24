@@ -211,6 +211,199 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    // ── 免设置的自动备份：写进「下载/Piecework」，卸载重装也还在 ──
+
+    private val backupDirName = "Piecework"
+
+    private fun backupUri(name: String): android.net.Uri? {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return null
+        val resolver = contentResolver
+        val selection =
+            "${android.provider.MediaStore.MediaColumns.DISPLAY_NAME}=? AND " +
+                "${android.provider.MediaStore.MediaColumns.RELATIVE_PATH}=?"
+        val args = arrayOf(name, "${android.os.Environment.DIRECTORY_DOWNLOADS}/$backupDirName/")
+        resolver.query(
+            android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            arrayOf(android.provider.MediaStore.MediaColumns._ID),
+            selection,
+            args,
+            null,
+        )?.use { c ->
+            if (c.moveToFirst()) {
+                val id = c.getLong(0)
+                return android.content.ContentUris.withAppendedId(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    id,
+                )
+            }
+        }
+        return null
+    }
+
+    private fun writeBackupFile(name: String, bytes: ByteArray, result: MethodChannel.Result) {
+        try {
+            if (name.isEmpty() || bytes.isEmpty()) {
+                result.error("bad_args", "名字或内容为空", null)
+                return
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val resolver = contentResolver
+                // 同名覆盖
+                backupUri(name)?.let { resolver.delete(it, null, null) }
+                val values = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, name)
+                    put(
+                        android.provider.MediaStore.MediaColumns.MIME_TYPE,
+                        "application/octet-stream",
+                    )
+                    put(
+                        android.provider.MediaStore.MediaColumns.RELATIVE_PATH,
+                        "${android.os.Environment.DIRECTORY_DOWNLOADS}/$backupDirName/",
+                    )
+                    put(android.provider.MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+                val uri = resolver.insert(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    values,
+                ) ?: run {
+                    result.error("insert_failed", "无法写入下载目录", null)
+                    return
+                }
+                resolver.openOutputStream(uri)?.use { it.write(bytes) }
+                values.clear()
+                values.put(android.provider.MediaStore.MediaColumns.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+            } else {
+                @Suppress("DEPRECATION")
+                val dir = java.io.File(
+                    android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS,
+                    ),
+                    backupDirName,
+                )
+                if (!dir.exists()) dir.mkdirs()
+                java.io.File(dir, name).writeBytes(bytes)
+                android.media.MediaScannerConnection.scanFile(
+                    this,
+                    arrayOf(java.io.File(dir, name).absolutePath),
+                    null,
+                    null,
+                )
+            }
+            result.success(name)
+        } catch (e: Exception) {
+            result.error("write_failed", e.message ?: "写入失败", null)
+        }
+    }
+
+    private fun deleteBackupFile(name: String, result: MethodChannel.Result) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val uri = backupUri(name)
+                if (uri != null) contentResolver.delete(uri, null, null)
+            } else {
+                @Suppress("DEPRECATION")
+                val f = java.io.File(
+                    java.io.File(
+                        android.os.Environment.getExternalStoragePublicDirectory(
+                            android.os.Environment.DIRECTORY_DOWNLOADS,
+                        ),
+                        backupDirName,
+                    ),
+                    name,
+                )
+                if (f.exists()) f.delete()
+            }
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("delete_failed", e.message ?: "删除失败", null)
+        }
+    }
+
+    private fun listBackupFiles(result: MethodChannel.Result) {
+        try {
+            val out = ArrayList<Map<String, Any>>()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val resolver = contentResolver
+                val selection = "${android.provider.MediaStore.MediaColumns.RELATIVE_PATH}=?"
+                val args = arrayOf(
+                    "${android.os.Environment.DIRECTORY_DOWNLOADS}/$backupDirName/",
+                )
+                resolver.query(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    arrayOf(
+                        android.provider.MediaStore.MediaColumns.DISPLAY_NAME,
+                        android.provider.MediaStore.MediaColumns.SIZE,
+                        android.provider.MediaStore.MediaColumns.DATE_MODIFIED,
+                    ),
+                    selection,
+                    args,
+                    null,
+                )?.use { c ->
+                    while (c.moveToNext()) {
+                        out.add(
+                            mapOf(
+                                "name" to (c.getString(0) ?: ""),
+                                "size" to c.getLong(1),
+                                "modified" to c.getLong(2) * 1000L,
+                            ),
+                        )
+                    }
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                val dir = java.io.File(
+                    android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS,
+                    ),
+                    backupDirName,
+                )
+                if (dir.exists()) {
+                    dir.listFiles()?.forEach { f ->
+                        out.add(
+                            mapOf(
+                                "name" to f.name,
+                                "size" to f.length(),
+                                "modified" to f.lastModified(),
+                            ),
+                        )
+                    }
+                }
+            }
+            result.success(out)
+        } catch (e: Exception) {
+            result.error("list_failed", e.message ?: "读取失败", null)
+        }
+    }
+
+    private fun readBackupFile(name: String, result: MethodChannel.Result) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val uri = backupUri(name)
+                if (uri == null) {
+                    result.error("missing", "找不到备份", null)
+                    return
+                }
+                val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                result.success(bytes)
+            } else {
+                @Suppress("DEPRECATION")
+                val f = java.io.File(
+                    java.io.File(
+                        android.os.Environment.getExternalStoragePublicDirectory(
+                            android.os.Environment.DIRECTORY_DOWNLOADS,
+                        ),
+                        backupDirName,
+                    ),
+                    name,
+                )
+                result.success(if (f.exists()) f.readBytes() else null)
+            }
+        } catch (e: Exception) {
+            result.error("read_failed", e.message ?: "读取失败", null)
+        }
+    }
+
     /** 打开「安装未知应用」设置页（Dart 侧按钮用） */
     private fun openInstallSettings(result: MethodChannel.Result) {
         try {
@@ -240,6 +433,20 @@ class MainActivity : FlutterActivity() {
                         "openInstallSettings" -> openInstallSettings(result)
                         "exportApk" -> exportApkToDownloads(
                             call.argument<String>("path") ?: "",
+                            result,
+                        )
+                        "writeBackup" -> writeBackupFile(
+                            call.argument<String>("name") ?: "",
+                            call.argument<ByteArray>("bytes") ?: ByteArray(0),
+                            result,
+                        )
+                        "listBackups" -> listBackupFiles(result)
+                        "deleteBackup" -> deleteBackupFile(
+                            call.argument<String>("name") ?: "",
+                            result,
+                        )
+                        "readBackup" -> readBackupFile(
+                            call.argument<String>("name") ?: "",
                             result,
                         )
                         "deviceId" -> {

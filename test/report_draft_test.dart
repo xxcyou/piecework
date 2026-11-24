@@ -130,6 +130,25 @@ void main() {
     expect((out.json['applied'] as Map?)?['workMode'], 'audit');
   });
 
+  test('草稿里带结构化行，前端可直接渲染报表', () async {
+    final out = await build().execute('build_report_draft', <String, dynamic>{
+      'title': '11 月工资表',
+      'mode': 'financial',
+      'rows': <dynamic>[
+        <String, dynamic>{'style_model': 'A1', 'quantity': 300, 'unit_price': 0.5},
+      ],
+    });
+    final draft = out.reportDraft!;
+    expect(draft['title'], '11 月工资表');
+    expect(draft['mode'], 'financial');
+    final rows = draft['rows'] as List;
+    final row = rows.first as Map;
+    expect(row['styleModel'], 'A1');
+    expect(row['quantity'], 300);
+    expect(row['unitPrice'], 0.5);
+    expect(row['amountMilli'], 150000); // 300 × 0.5 = 150 元
+  });
+
   test('数量 0 的行被丢掉（避免脏数据）', () async {
     final out = await build().execute('build_report_draft', <String, dynamic>{
       'rows': <dynamic>[

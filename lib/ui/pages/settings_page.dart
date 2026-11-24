@@ -21,6 +21,7 @@ import '../../providers/settings_providers.dart';
 import '../../providers/ui_providers.dart';
 import '../../providers/work_mode_provider.dart';
 import '../widgets/ai_lock.dart';
+import '../widgets/device_backup_card.dart';
 import 'ai_settings_page.dart';
 import 'about_page.dart';
 import 'gallery_page.dart';

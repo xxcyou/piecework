@@ -60,6 +60,7 @@ class ToolOutcome {
     this.calc,
     this.code,
     this.photos = const <Map<String, dynamic>>[],
+    this.reportDraft,
   });
 
   final Map<String, dynamic> json;
@@ -87,6 +88,9 @@ class ToolOutcome {
   final CalcTable? calc;
   final CodeBlock? code;
 
+  /// AI 生成的报表草稿（不落库）：聊天里给一个「查看报表」入口
+  final Map<String, dynamic>? reportDraft;
+
   /// 要展示的图片卡片（show_photos 工具用）
   final List<Map<String, dynamic>> photos;
 
@@ -99,6 +103,7 @@ class ToolOutcome {
     CalcTable? calc,
     CodeBlock? code,
     List<Map<String, dynamic>>? photos,
+    Map<String, dynamic>? reportDraft,
   }) =>
       ToolOutcome(
         json: json,
@@ -114,6 +119,7 @@ class ToolOutcome {
         calc: calc ?? this.calc,
         code: code ?? this.code,
         photos: photos ?? this.photos,
+        reportDraft: reportDraft ?? this.reportDraft,
       );
 }
 
@@ -969,6 +975,29 @@ class AiTools {
     <String, dynamic>{
       'type': 'function',
       'function': <String, dynamic>{
+        'name': 'calculator',
+        'description':
+            '**算数必须用这个**：任何加减乘除、合计、金额换算都要调用它，'
+            '回答里的数字只能逐字引用这里返回的结果，不许自己心算。'
+            '一次可以传多条算式。',
+        'parameters': <String, dynamic>{
+          'type': 'object',
+          'properties': <String, dynamic>{
+            'expressions': <String, dynamic>{
+              'type': 'array',
+              'items': <String, dynamic>{'type': 'string'},
+              'description':
+                  '算式列表，支持 + - * / 和括号，例如 '
+                  '["200+200", "410+340", "750*0.6", "(200+200)*0.5"]',
+            },
+          },
+          'required': <String>['expressions'],
+        },
+      },
+    },
+    <String, dynamic>{
+      'type': 'function',
+      'function': <String, dynamic>{
         'name': 'explain_conversion',
         'description':
             '逐条列出记录的原始数量、单位、折算值、用的换算规则，用于核对单位换算是否正确。'
@@ -1464,6 +1493,8 @@ class AiToolExecutor {
         return _managePhotos(args);
       case 'ask_user':
         return _askUser(args);
+      case 'calculator':
+        return _calculator(args);
       case 'explain_conversion':
         return _explainConversion(args);
       case 'find_duplicates':
@@ -2730,6 +2761,65 @@ class AiToolExecutor {
     );
   }
 
+  // ───────────────────────── 计算器（AI 算数只认它）─────────────────────────
+
+  /// 精确计算：金额一律按「整数厘」算，避免浮点误差。
+  Future<ToolOutcome> _calculator(Map<String, dynamic> args) async {
+    final list = <String>[
+      for (final e in (args['expressions'] as List?) ?? const <dynamic>[])
+        if (e is String) e.trim(),
+    ].where((e) => e.isNotEmpty).toList();
+
+    if (list.isEmpty) {
+      return ToolOutcome(
+        json: <String, dynamic>{
+          'ok': false,
+          'error': 'expressions 是空的，把算式传进来',
+        },
+      );
+    }
+
+    final results = <Map<String, dynamic>>[];
+    final steps = <CalcStep>[];
+    for (final expr in list) {
+      try {
+        final value = _evalExpr(expr);
+        // 厘（0.001 元）→ 三位小数展示，去掉多余零
+        final cents = (value * 1000).round();
+        final text = (cents / 1000).toStringAsFixed(3)
+            .replaceAll(RegExp(r'0+$'), '')
+            .replaceAll(RegExp(r'\.$'), '');
+        results.add(<String, dynamic>{
+          'expression': expr,
+          'value': value,
+          'text': text,
+          'milli': cents,
+        });
+        steps.add(CalcStep(label: expr, expression: expr, result: text));
+      } catch (e) {
+        results.add(<String, dynamic>{
+          'expression': expr,
+          'error': '算式看不懂：$e',
+        });
+      }
+    }
+
+    final okAll = results.every((r) => !r.containsKey('error'));
+    return ToolOutcome(
+      json: <String, dynamic>{
+        'ok': okAll,
+        'results': results,
+        'note': '这些是唯一可信的数字，回答里只能逐字引用。',
+      },
+      calc: steps.isEmpty
+          ? null
+          : CalcTable(title: '计算结果', steps: steps, conclusion: ''),
+    );
+  }
+
+  /// 极简四则运算求值（+ - * / 括号）
+  double _evalExpr(String src) => _ExprParser(src).parse();
+
   // ───────────────────────── 报表草稿（不落库）─────────────────────────
 
   /// 生成「只看不存」的报表：可以塞虚构数据，绝不写进计件记录。
@@ -2799,7 +2889,9 @@ class AiToolExecutor {
     }
 
     // 3) 按模式整理成表格行
-    final lines = <({String label, String qty, String price, int amountMilli})>[];
+    final lines = <({String label, String qty, String price, int amountMilli,
+        String styleModel, String color, String size, int quantity,
+        String unit, double unitPrice})>[];
     var totalMilli = 0;
     var totalCenti = 0;
 
@@ -2826,6 +2918,7 @@ class AiToolExecutor {
         }
         totalMilli += amount;
         totalCenti += centi;
+        final price = prices.length == 1 ? prices.first : 0.0;
         lines.add((
           label: e.key.trim().isEmpty ? '（未填型号）' : e.key.trim(),
           qty: '${(centi / 100).toStringAsFixed(centi % 100 == 0 ? 0 : 2)} '
@@ -2834,6 +2927,12 @@ class AiToolExecutor {
               ? Money.plain(Money.toMilli(prices.first))
               : '不一',
           amountMilli: amount,
+          styleModel: e.key.trim(),
+          color: '',
+          size: '',
+          quantity: (centi / 100).round(),
+          unit: converter.baseUnit,
+          unitPrice: price,
         ));
       }
     } else {
@@ -2852,6 +2951,12 @@ class AiToolExecutor {
               ? '—'
               : Money.plain(Money.toMilli(r.unitPrice)),
           amountMilli: amount,
+          styleModel: r.styleModel,
+          color: r.color,
+          size: r.size,
+          quantity: r.quantity,
+          unit: r.unit,
+          unitPrice: r.unitPrice,
         ));
       }
     }
@@ -2890,6 +2995,28 @@ class AiToolExecutor {
               'amount': Money.yuan(l.amountMilli),
             },
         ],
+      },
+      reportDraft: <String, dynamic>{
+        'title': title,
+        'subtitle': subtitle,
+        'profile': profile,
+        'mode': mode,
+        'rows': <Map<String, dynamic>>[
+          for (final l in lines)
+            <String, dynamic>{
+              'label': l.label,
+              'styleModel': l.styleModel,
+              'color': l.color,
+              'size': l.size,
+              'quantity': l.quantity,
+              'unit': l.unit,
+              'unitPrice': l.unitPrice,
+              'amountMilli': l.amountMilli,
+            },
+        ],
+        'totalText': totalText,
+        'baseUnit': converter.baseUnit,
+        'createdAt': DateTime.now().toIso8601String(),
       },
       calc: CalcTable(
         title: '$title${profile.isEmpty ? '' : ' · $profile'}',
@@ -3890,6 +4017,9 @@ class AiToolExecutor {
       case 'update_records':
       case 'apply_filter':
       case 'top_n':
+      case 'calculator':
+        final ex = args['expressions'];
+        return ex is List ? ex.take(2).join(' , ') : '算一下';
       case 'explain_conversion':
         return outcome.filter?.summary ?? '';
       case 'compare_periods':
@@ -4086,6 +4216,13 @@ class AiToolExecutor {
               '${b['label'] ?? 'B'} ${b['totalQuantity'] ?? '-'}';
         }
         return '对比完成';
+      case 'calculator':
+        final rs = json['results'];
+        if (rs is List && rs.isNotEmpty) {
+          final first = rs.first;
+          if (first is Map) return '${first['expression'] ?? ''} = ${first['text'] ?? ''}';
+        }
+        return '算好了';
       case 'explain_conversion':
         final ok = json['consistent'];
         return ok == true ? '换算自洽' : '换算不一致（已列出明细）';
@@ -4358,4 +4495,92 @@ class _Period {
   final String label;
   final DateTime start;
   final DateTime end;
+}
+
+/// 极简四则运算解析器（只做 + - * / 和括号，够算件数和工钱）
+class _ExprParser {
+  _ExprParser(String src) {
+    var i = 0;
+    while (i < src.length) {
+      final c = src[i];
+      if (c == ' ') {
+        i++;
+        continue;
+      }
+      if ('+-*/()'.contains(c)) {
+        _tokens.add(c);
+        i++;
+        continue;
+      }
+      if (RegExp(r'[0-9.]').hasMatch(c)) {
+        var j = i;
+        while (j < src.length && RegExp(r'[0-9.]').hasMatch(src[j])) {
+          j++;
+        }
+        _tokens.add(src.substring(i, j));
+        i = j;
+        continue;
+      }
+      throw FormatException('不认识的字符「$c」');
+    }
+  }
+
+  final List<String> _tokens = <String>[];
+  int _pos = 0;
+
+  double parse() {
+    if (_tokens.isEmpty) throw const FormatException('算式是空的');
+    final v = _expr();
+    if (_pos != _tokens.length) throw const FormatException('算式没算完');
+    return v;
+  }
+
+  double _expr() {
+    var v = _term();
+    while (_pos < _tokens.length &&
+        (_tokens[_pos] == '+' || _tokens[_pos] == '-')) {
+      final op = _tokens[_pos++];
+      final r = _term();
+      v = op == '+' ? v + r : v - r;
+    }
+    return v;
+  }
+
+  double _term() {
+    var v = _factor();
+    while (_pos < _tokens.length &&
+        (_tokens[_pos] == '*' || _tokens[_pos] == '/')) {
+      final op = _tokens[_pos++];
+      final r = _factor();
+      if (op == '*') {
+        v = v * r;
+      } else {
+        if (r == 0) throw const FormatException('不能除以 0');
+        v = v / r;
+      }
+    }
+    return v;
+  }
+
+  double _factor() {
+    if (_pos >= _tokens.length) throw const FormatException('算式不完整');
+    final t = _tokens[_pos];
+    if (t == '-') {
+      _pos++;
+      return -_factor();
+    }
+    if (t == '(') {
+      _pos++;
+      final v = _expr();
+      if (_pos >= _tokens.length || _tokens[_pos] != ')') {
+        throw const FormatException('括号没闭合');
+      }
+      _pos++;
+      return v;
+    }
+    final v = double.tryParse(t);
+    if (v == null) throw FormatException('不是数字「$t」');
+    _pos++;
+    return v;
+  }
 }

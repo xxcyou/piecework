@@ -24,6 +24,12 @@ class _NoticeGateState extends ConsumerState<NoticeGate>
   bool _checking = false;
   bool _shownThisSession = false;
 
+  /// 本次运行里用户点了「稍后」的版本号：同一个版本不再重复弹
+  int _snoozedVersion = 0;
+
+  /// 已经有一个弹窗在路上（防止 build 触发两次 → 两个弹窗叠在一起）
+  bool _dialogOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +47,7 @@ class _NoticeGateState extends ConsumerState<NoticeGate>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
-    // 允许再次弹窗：新公告/新版本可能在这期间发布
+    // 只在「清单里的版本变了」时才允许重新弹，避免每次切回来都弹一遍
     _shownThisSession = false;
     _refresh(silent: true);
   }
@@ -84,7 +90,7 @@ class _NoticeGateState extends ConsumerState<NoticeGate>
   }
 
   void _maybeShowDialogs() {
-    if (_shownThisSession) return;
+    if (_shownThisSession || _dialogOpen) return;
     final m = _manifest;
     if (m == null) return;
     if (!m.operating) return; // 停运页已经接管
@@ -92,9 +98,14 @@ class _NoticeGateState extends ConsumerState<NoticeGate>
     final latest = m.latest;
     if (latest != null &&
         latest.isNewer &&
+        latest.versionCode != _snoozedVersion &&
         _flags.dismissedVersionCode != latest.versionCode) {
       _shownThisSession = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showUpdate(latest));
+      _dialogOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _showUpdate(latest);
+        _dialogOpen = false;
+      });
       return;
     }
 
@@ -103,11 +114,19 @@ class _NoticeGateState extends ConsumerState<NoticeGate>
         notice.visible &&
         _flags.dismissedNoticeId != notice.id) {
       _shownThisSession = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showNotice(notice));
+      _dialogOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _showNotice(notice);
+        _dialogOpen = false;
+      });
     }
   }
 
-  Future<void> _showUpdate(RemoteRelease r) => handleUpdateDialog(context, r);
+  Future<void> _showUpdate(RemoteRelease r) async {
+    await handleUpdateDialog(context, r);
+    // 不管点了稍后还是忽略，本次运行都不再弹同一版本
+    _snoozedVersion = r.versionCode;
+  }
 
   Future<void> _showNotice(RemoteNotice n) async {
     if (!mounted) return;

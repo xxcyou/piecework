@@ -5,6 +5,7 @@ import 'package:isar_community/isar.dart';
 
 import '../models/app_setting.dart';
 import 'backup_service.dart';
+import 'device_backup_service.dart';
 import 'secure_backup_service.dart';
 import 'webdav_service.dart';
 
@@ -63,6 +64,9 @@ class AutoBackupService {
     if (isar == null || _running) return null;
     _running = true;
     try {
+      // ① 免设置备份（公共目录，卸载重装也在）—— 不依赖任何用户配置
+      await DeviceBackupService.instance.run(isar);
+
       final bytes = await BackupService(isar).createBackup();
       final name = await SecureBackupService.instance.runAuto(bytes);
 

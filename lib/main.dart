@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar_community/isar.dart';
@@ -21,6 +23,7 @@ import 'data/repositories/record_repository.dart';
 import 'data/repositories/settings_repository.dart';
 import 'data/repositories/unit_repository.dart';
 import 'data/services/auto_backup_service.dart';
+import 'data/services/device_backup_service.dart';
 import 'data/services/photo_gc.dart';
 import 'data/services/secure_backup_service.dart';
 import 'data/services/photo_service.dart';
@@ -58,6 +61,8 @@ Future<void> main() async {
 
   // 自动备份：数据有变动就防抖备份（防崩溃/误删）
   AutoBackupService.instance.attach(isar);
+  // 免设置备份：启动时先存一份到「下载/Piecework」（用户什么都不用配）
+  unawaited(DeviceBackupService.instance.run(isar));
   // 加密备份（公共目录）需要 Isar 才能打包
   SecureBackupService.instance.attach(isar);
 

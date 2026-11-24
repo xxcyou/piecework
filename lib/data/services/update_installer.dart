@@ -19,11 +19,23 @@ class UpdateInstaller {
 
   static const MethodChannel _ch = MethodChannel('piecework/public_storage');
 
+  /// 当前下载的客户端（取消时用）
+  http.Client? _client;
+
+  /// 取消正在进行的下载
+  void cancel() {
+    _client?.close();
+    _client = null;
+  }
+
   /// 下载 APK 到应用私有目录，返回文件路径
+  ///
+  /// * 每块之间 20 秒没数据就报错（防止进度条一直卡着不动）
+  /// * 支持 [cancel]
   Future<String> download(
     String url, {
     UpdateProgress? onProgress,
-    Duration timeout = const Duration(minutes: 5),
+    Duration timeout = const Duration(seconds: 20),
   }) async {
     final docs = await getApplicationDocumentsDirectory();
     final dir = Directory(p.join(docs.path, 'update'));
@@ -32,6 +44,7 @@ class UpdateInstaller {
     if (await file.exists()) await file.delete();
 
     final client = http.Client();
+    _client = client;
     try {
       final req = http.Request('GET', Uri.parse(url));
       final res = await client.send(req).timeout(const Duration(seconds: 30));
@@ -58,8 +71,12 @@ class UpdateInstaller {
       if (received < 1024) {
         throw const FormatException('下载内容不完整（文件太小）');
       }
+      if (total > 0 && received != total) {
+        throw FormatException('下载不完整：$received / $total 字节，请重试');
+      }
       return file.path;
     } finally {
+      _client = null;
       client.close();
     }
   }

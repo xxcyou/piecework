@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2027,
-    "versionName": "1.4.0",
+    "versionCode": 2031,
+    "versionName": "1.4.4",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 财务模式：按型号汇总、不显示日期（默认）\n· 审计模式：逐条明细\n· 报表带身份名；上报改名「结算」\n· AI 可切模式、可生成报表草稿（不写记录）",
+    "notes": "· 强制自动备份（免设置）：加密存到「下载/Piecework」，卸载重装可恢复\n· AI 算数强制走计算器，回答末尾附「计算器核对」",
     "force": false
   }
 }
