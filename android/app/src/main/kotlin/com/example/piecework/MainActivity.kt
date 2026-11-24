@@ -123,6 +123,14 @@ class MainActivity : FlutterActivity() {
                             installApk(call.argument<String>("path") ?: "", result)
                         }
                         "openInstallSettings" -> openInstallSettings(result)
+                        "deviceId" -> {
+                            // 设备码来源：Android ID（卸载重装不变，刷机/换机会变）
+                            val id = android.provider.Settings.Secure.getString(
+                                contentResolver,
+                                android.provider.Settings.Secure.ANDROID_ID,
+                            ) ?: ""
+                            result.success(id)
+                        }
                         "openUrl" -> {
                             // 用系统浏览器打开链接（更新下载 / 项目主页）
                             val url = call.argument<String>("url") ?: ""

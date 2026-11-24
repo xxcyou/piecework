@@ -26,3 +26,6 @@ android/local.properties
 *.iml
 .idea/
 .DS_Store
+
+# 激活码生成器（含私钥，绝不能提交）
+keygen_app/

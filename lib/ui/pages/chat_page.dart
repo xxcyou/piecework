@@ -11,10 +11,12 @@ import '../../data/models/chat_message.dart';
 import '../../data/models/chat_session.dart';
 import '../../data/services/photo_service.dart';
 import '../../providers/chat_providers.dart';
+import '../../providers/license_providers.dart';
 import '../../providers/terminal_providers.dart';
 import '../../providers/settings_providers.dart';
 import '../../providers/ui_providers.dart';
 import '../tour_keys.dart';
+import '../widgets/ai_lock.dart';
 import '../widgets/ai_message_bubble.dart';
 import '../widgets/profile_switcher.dart';
 import '../widgets/thinking_header.dart';
@@ -410,6 +412,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final async = ref.watch(chatProvider);
     final busy = ref.watch(chatBusyProvider);
     final config = ref.watch(aiConfigProvider);
+    final activated = ref.watch(aiActivatedProvider);
     final session = ref.watch(currentSessionProvider);
     final streaming = ref.watch(streamingProvider);
     final terminal = ref.watch(terminalSessionProvider);
@@ -516,7 +519,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           const SizedBox(width: 2),
         ],
       ),
-      body: Column(
+      body: Stack(
+        children: <Widget>[
+          AbsorbPointer(
+            absorbing: !activated,
+            child: Column(
         children: <Widget>[
           if (!config.isConfigured) _buildConfigHint(scheme),
           Expanded(
@@ -569,9 +576,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     ),
             ),
           ),
-          _buildContextBar(scheme),
-          if (busy) _buildThinking(scheme),
-          _buildInputBar(scheme, busy),
+              _buildContextBar(scheme),
+              if (busy) _buildThinking(scheme),
+              _buildInputBar(scheme, busy),
+            ],
+          ),
+        ),
+          if (!activated)
+            AiLockOverlay(
+              onActivate: () => showActivationDialog(context, ref),
+            ),
         ],
       ),
     );

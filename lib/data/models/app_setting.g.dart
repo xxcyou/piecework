@@ -37,118 +37,123 @@ const AppSettingSchema = CollectionSchema(
       name: r'aiBuiltinModelId',
       type: IsarType.string,
     ),
-    r'aiModel': PropertySchema(
+    r'aiLicenseCode': PropertySchema(
       id: 4,
+      name: r'aiLicenseCode',
+      type: IsarType.string,
+    ),
+    r'aiModel': PropertySchema(
+      id: 5,
       name: r'aiModel',
       type: IsarType.string,
     ),
     r'aiModelCacheAt': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'aiModelCacheAt',
       type: IsarType.dateTime,
     ),
     r'aiModelCacheJson': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'aiModelCacheJson',
       type: IsarType.string,
     ),
     r'aiProviderId': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'aiProviderId',
       type: IsarType.string,
     ),
     r'aiSystemPrompt': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'aiSystemPrompt',
       type: IsarType.string,
     ),
     r'aiThinkingLevel': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'aiThinkingLevel',
       type: IsarType.long,
     ),
     r'aiVisionEnabled': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'aiVisionEnabled',
       type: IsarType.bool,
     ),
     r'chatSessionId': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'chatSessionId',
       type: IsarType.long,
     ),
     r'contextWindowTokens': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'contextWindowTokens',
       type: IsarType.long,
     ),
     r'defaultUnitPrice': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'defaultUnitPrice',
       type: IsarType.double,
     ),
     r'lastBackupMs': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'lastBackupMs',
       type: IsarType.long,
     ),
     r'reportFontScale': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'reportFontScale',
       type: IsarType.double,
     ),
     r'reportGroupBy': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'reportGroupBy',
       type: IsarType.long,
     ),
     r'reportShowPhoto': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'reportShowPhoto',
       type: IsarType.bool,
     ),
     r'reportSubtitle': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'reportSubtitle',
       type: IsarType.string,
     ),
     r'reportTemplate': PropertySchema(
-      id: 19,
+      id: 20,
       name: r'reportTemplate',
       type: IsarType.long,
     ),
     r'reportTitle': PropertySchema(
-      id: 20,
+      id: 21,
       name: r'reportTitle',
       type: IsarType.string,
     ),
     r'themeModeIndex': PropertySchema(
-      id: 21,
+      id: 22,
       name: r'themeModeIndex',
       type: IsarType.long,
     ),
     r'webdavDir': PropertySchema(
-      id: 22,
+      id: 23,
       name: r'webdavDir',
       type: IsarType.string,
     ),
     r'webdavEnabled': PropertySchema(
-      id: 23,
+      id: 24,
       name: r'webdavEnabled',
       type: IsarType.bool,
     ),
     r'webdavPass': PropertySchema(
-      id: 24,
+      id: 25,
       name: r'webdavPass',
       type: IsarType.string,
     ),
     r'webdavUrl': PropertySchema(
-      id: 25,
+      id: 26,
       name: r'webdavUrl',
       type: IsarType.string,
     ),
     r'webdavUser': PropertySchema(
-      id: 26,
+      id: 27,
       name: r'webdavUser',
       type: IsarType.string,
     )
@@ -176,6 +181,7 @@ int _appSettingEstimateSize(
   bytesCount += 3 + object.aiApiKey.length * 3;
   bytesCount += 3 + object.aiBaseUrl.length * 3;
   bytesCount += 3 + object.aiBuiltinModelId.length * 3;
+  bytesCount += 3 + object.aiLicenseCode.length * 3;
   bytesCount += 3 + object.aiModel.length * 3;
   bytesCount += 3 + object.aiModelCacheJson.length * 3;
   bytesCount += 3 + object.aiProviderId.length * 3;
@@ -199,29 +205,30 @@ void _appSettingSerialize(
   writer.writeString(offsets[1], object.aiApiKey);
   writer.writeString(offsets[2], object.aiBaseUrl);
   writer.writeString(offsets[3], object.aiBuiltinModelId);
-  writer.writeString(offsets[4], object.aiModel);
-  writer.writeDateTime(offsets[5], object.aiModelCacheAt);
-  writer.writeString(offsets[6], object.aiModelCacheJson);
-  writer.writeString(offsets[7], object.aiProviderId);
-  writer.writeString(offsets[8], object.aiSystemPrompt);
-  writer.writeLong(offsets[9], object.aiThinkingLevel);
-  writer.writeBool(offsets[10], object.aiVisionEnabled);
-  writer.writeLong(offsets[11], object.chatSessionId);
-  writer.writeLong(offsets[12], object.contextWindowTokens);
-  writer.writeDouble(offsets[13], object.defaultUnitPrice);
-  writer.writeLong(offsets[14], object.lastBackupMs);
-  writer.writeDouble(offsets[15], object.reportFontScale);
-  writer.writeLong(offsets[16], object.reportGroupBy);
-  writer.writeBool(offsets[17], object.reportShowPhoto);
-  writer.writeString(offsets[18], object.reportSubtitle);
-  writer.writeLong(offsets[19], object.reportTemplate);
-  writer.writeString(offsets[20], object.reportTitle);
-  writer.writeLong(offsets[21], object.themeModeIndex);
-  writer.writeString(offsets[22], object.webdavDir);
-  writer.writeBool(offsets[23], object.webdavEnabled);
-  writer.writeString(offsets[24], object.webdavPass);
-  writer.writeString(offsets[25], object.webdavUrl);
-  writer.writeString(offsets[26], object.webdavUser);
+  writer.writeString(offsets[4], object.aiLicenseCode);
+  writer.writeString(offsets[5], object.aiModel);
+  writer.writeDateTime(offsets[6], object.aiModelCacheAt);
+  writer.writeString(offsets[7], object.aiModelCacheJson);
+  writer.writeString(offsets[8], object.aiProviderId);
+  writer.writeString(offsets[9], object.aiSystemPrompt);
+  writer.writeLong(offsets[10], object.aiThinkingLevel);
+  writer.writeBool(offsets[11], object.aiVisionEnabled);
+  writer.writeLong(offsets[12], object.chatSessionId);
+  writer.writeLong(offsets[13], object.contextWindowTokens);
+  writer.writeDouble(offsets[14], object.defaultUnitPrice);
+  writer.writeLong(offsets[15], object.lastBackupMs);
+  writer.writeDouble(offsets[16], object.reportFontScale);
+  writer.writeLong(offsets[17], object.reportGroupBy);
+  writer.writeBool(offsets[18], object.reportShowPhoto);
+  writer.writeString(offsets[19], object.reportSubtitle);
+  writer.writeLong(offsets[20], object.reportTemplate);
+  writer.writeString(offsets[21], object.reportTitle);
+  writer.writeLong(offsets[22], object.themeModeIndex);
+  writer.writeString(offsets[23], object.webdavDir);
+  writer.writeBool(offsets[24], object.webdavEnabled);
+  writer.writeString(offsets[25], object.webdavPass);
+  writer.writeString(offsets[26], object.webdavUrl);
+  writer.writeString(offsets[27], object.webdavUser);
 }
 
 AppSetting _appSettingDeserialize(
@@ -235,30 +242,31 @@ AppSetting _appSettingDeserialize(
   object.aiApiKey = reader.readString(offsets[1]);
   object.aiBaseUrl = reader.readString(offsets[2]);
   object.aiBuiltinModelId = reader.readString(offsets[3]);
-  object.aiModel = reader.readString(offsets[4]);
-  object.aiModelCacheAt = reader.readDateTimeOrNull(offsets[5]);
-  object.aiModelCacheJson = reader.readString(offsets[6]);
-  object.aiProviderId = reader.readString(offsets[7]);
-  object.aiSystemPrompt = reader.readString(offsets[8]);
-  object.aiThinkingLevel = reader.readLong(offsets[9]);
-  object.aiVisionEnabled = reader.readBool(offsets[10]);
-  object.chatSessionId = reader.readLong(offsets[11]);
-  object.contextWindowTokens = reader.readLong(offsets[12]);
-  object.defaultUnitPrice = reader.readDouble(offsets[13]);
+  object.aiLicenseCode = reader.readString(offsets[4]);
+  object.aiModel = reader.readString(offsets[5]);
+  object.aiModelCacheAt = reader.readDateTimeOrNull(offsets[6]);
+  object.aiModelCacheJson = reader.readString(offsets[7]);
+  object.aiProviderId = reader.readString(offsets[8]);
+  object.aiSystemPrompt = reader.readString(offsets[9]);
+  object.aiThinkingLevel = reader.readLong(offsets[10]);
+  object.aiVisionEnabled = reader.readBool(offsets[11]);
+  object.chatSessionId = reader.readLong(offsets[12]);
+  object.contextWindowTokens = reader.readLong(offsets[13]);
+  object.defaultUnitPrice = reader.readDouble(offsets[14]);
   object.id = id;
-  object.lastBackupMs = reader.readLong(offsets[14]);
-  object.reportFontScale = reader.readDouble(offsets[15]);
-  object.reportGroupBy = reader.readLong(offsets[16]);
-  object.reportShowPhoto = reader.readBool(offsets[17]);
-  object.reportSubtitle = reader.readString(offsets[18]);
-  object.reportTemplate = reader.readLong(offsets[19]);
-  object.reportTitle = reader.readString(offsets[20]);
-  object.themeModeIndex = reader.readLong(offsets[21]);
-  object.webdavDir = reader.readString(offsets[22]);
-  object.webdavEnabled = reader.readBool(offsets[23]);
-  object.webdavPass = reader.readString(offsets[24]);
-  object.webdavUrl = reader.readString(offsets[25]);
-  object.webdavUser = reader.readString(offsets[26]);
+  object.lastBackupMs = reader.readLong(offsets[15]);
+  object.reportFontScale = reader.readDouble(offsets[16]);
+  object.reportGroupBy = reader.readLong(offsets[17]);
+  object.reportShowPhoto = reader.readBool(offsets[18]);
+  object.reportSubtitle = reader.readString(offsets[19]);
+  object.reportTemplate = reader.readLong(offsets[20]);
+  object.reportTitle = reader.readString(offsets[21]);
+  object.themeModeIndex = reader.readLong(offsets[22]);
+  object.webdavDir = reader.readString(offsets[23]);
+  object.webdavEnabled = reader.readBool(offsets[24]);
+  object.webdavPass = reader.readString(offsets[25]);
+  object.webdavUrl = reader.readString(offsets[26]);
+  object.webdavUser = reader.readString(offsets[27]);
   return object;
 }
 
@@ -280,48 +288,50 @@ P _appSettingDeserializeProp<P>(
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 6:
       return (reader.readString(offset)) as P;
+    case 6:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 7:
       return (reader.readString(offset)) as P;
     case 8:
       return (reader.readString(offset)) as P;
     case 9:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readBool(offset)) as P;
-    case 11:
       return (reader.readLong(offset)) as P;
+    case 11:
+      return (reader.readBool(offset)) as P;
     case 12:
       return (reader.readLong(offset)) as P;
     case 13:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 14:
-      return (reader.readLong(offset)) as P;
-    case 15:
       return (reader.readDouble(offset)) as P;
+    case 15:
+      return (reader.readLong(offset)) as P;
     case 16:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 17:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 18:
-      return (reader.readString(offset)) as P;
-    case 19:
-      return (reader.readLong(offset)) as P;
-    case 20:
-      return (reader.readString(offset)) as P;
-    case 21:
-      return (reader.readLong(offset)) as P;
-    case 22:
-      return (reader.readString(offset)) as P;
-    case 23:
       return (reader.readBool(offset)) as P;
-    case 24:
+    case 19:
       return (reader.readString(offset)) as P;
+    case 20:
+      return (reader.readLong(offset)) as P;
+    case 21:
+      return (reader.readString(offset)) as P;
+    case 22:
+      return (reader.readLong(offset)) as P;
+    case 23:
+      return (reader.readString(offset)) as P;
+    case 24:
+      return (reader.readBool(offset)) as P;
     case 25:
       return (reader.readString(offset)) as P;
     case 26:
+      return (reader.readString(offset)) as P;
+    case 27:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -874,6 +884,142 @@ extension AppSettingQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'aiBuiltinModelId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'aiLicenseCode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'aiLicenseCode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'aiLicenseCode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'aiLicenseCode',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'aiLicenseCode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'aiLicenseCode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'aiLicenseCode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'aiLicenseCode',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'aiLicenseCode',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      aiLicenseCodeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'aiLicenseCode',
         value: '',
       ));
     });
@@ -2969,6 +3115,18 @@ extension AppSettingQuerySortBy
     });
   }
 
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> sortByAiLicenseCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiLicenseCode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> sortByAiLicenseCodeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiLicenseCode', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSetting, AppSetting, QAfterSortBy> sortByAiModel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'aiModel', Sort.asc);
@@ -3311,6 +3469,18 @@ extension AppSettingQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> thenByAiLicenseCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiLicenseCode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> thenByAiLicenseCodeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiLicenseCode', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSetting, AppSetting, QAfterSortBy> thenByAiModel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'aiModel', Sort.asc);
@@ -3643,6 +3813,14 @@ extension AppSettingQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSetting, AppSetting, QDistinct> distinctByAiLicenseCode(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'aiLicenseCode',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<AppSetting, AppSetting, QDistinct> distinctByAiModel(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -3826,6 +4004,12 @@ extension AppSettingQueryProperty
       aiBuiltinModelIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'aiBuiltinModelId');
+    });
+  }
+
+  QueryBuilder<AppSetting, String, QQueryOperations> aiLicenseCodeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiLicenseCode');
     });
   }
 
