@@ -1,0 +1,20 @@
+{
+  "_说明": "App 启动/回到前台时拉这份清单（先走加速 https://gh.y4cc.cc/gh/ + raw，失败再用原始地址）。改完提交到 master 即生效。",
+  "_字段": {
+    "operating": "false = 不运营，App 直接挡在停服页",
+    "operatingMessage": "停服页显示的话",
+    "publicNotice": "公关公告（平时 null）。id 变了才再弹；active=false 或过期不弹",
+    "latest.versionCode": "基础版本号，必须 > lib/core/app_info.dart 里的 kAppVersionCode 才提示",
+    "latest.apkUrl": "GitHub Release 的 APK 下载地址（App 会自动套加速前缀）"
+  },
+  "operating": true,
+  "operatingMessage": "",
+  "publicNotice": null,
+  "latest": {
+    "versionCode": 2002,
+    "versionName": "1.0.1",
+    "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
+    "notes": "· 多身份卡：每人一张卡，记录/报表/AI 全部隔离\n· 颜色块 + 从货物实拍取色\n· 多选汇总：跨单位折算、金额按整数厘累加\n· 公告 / 自动更新（本次就是这个功能）\n· WebDAV 云备份",
+    "force": false
+  }
+}

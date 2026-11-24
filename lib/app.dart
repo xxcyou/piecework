@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme.dart';
 import 'providers/settings_providers.dart';
 import 'ui/pages/home_shell.dart';
+import 'ui/widgets/notice_gate.dart';
 
 /// 应用根组件：主题 / 语言 / 首页
 class PieceworkApp extends ConsumerWidget {
@@ -32,7 +33,8 @@ class PieceworkApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const HomeShell(),
+      // 启动闸门：不运营 → 停运页；有新版/公告 → 弹窗
+      home: const NoticeGate(child: HomeShell()),
     );
   }
 }

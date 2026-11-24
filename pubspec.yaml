@@ -73,3 +73,4 @@ flutter:
   # 给 AI 的终端用：assets 里的东西第一次使用时解压到应用目录
   assets:
     - assets/linux/
+    - assets/wechat_qr.png

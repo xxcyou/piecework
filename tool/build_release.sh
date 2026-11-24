@@ -20,6 +20,13 @@ cd "$(dirname "$0")/.."
 : "${JAVA_HOME:=/usr/lib/jvm/java-17-openjdk-amd64}"
 export JAVA_HOME
 
+# 版本号单一来源：lib/core/app_info.dart
+VERSION_CODE="$(sed -n 's/.*kAppVersionCode = \([0-9]*\).*/\1/p' lib/core/app_info.dart | head -1)"
+VERSION_NAME="$(sed -n "s/.*kAppVersionName = '\([^']*\)'.*/\1/p" lib/core/app_info.dart | head -1)"
+: "${VERSION_CODE:=1}"
+: "${VERSION_NAME:=1.0.0}"
+echo "== 版本 $VERSION_NAME ($VERSION_CODE) =="
+
 BACKUP="$(mktemp)"
 cp pubspec.yaml "$BACKUP"
 
@@ -43,7 +50,8 @@ print('== 已临时移除 integration_test（仅构建期）==')
 PY
 
 "$FLUTTER" pub get
-"$FLUTTER" build apk --release --split-per-abi "$@"
+"$FLUTTER" build apk --release --split-per-abi \
+  --build-number="$VERSION_CODE" --build-name="$VERSION_NAME" "$@"
 
 OUT=build/app/outputs/flutter-apk
 ls -la "$OUT"/*-release.apk

@@ -36,6 +36,21 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 try {
                     when (call.method) {
+                        "openUrl" -> {
+                            // 用系统浏览器打开链接（更新下载 / 项目主页）
+                            val url = call.argument<String>("url") ?: ""
+                            if (url.isEmpty()) {
+                                result.error("empty", "url 为空", null)
+                            } else {
+                                startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(url),
+                                    ),
+                                )
+                                result.success(true)
+                            }
+                        }
                         "nativeLibDir" -> {
                             // proot 的可执行文件放在 nativeLibraryDir（lib*.so）
                             result.success(applicationInfo.nativeLibraryDir)
