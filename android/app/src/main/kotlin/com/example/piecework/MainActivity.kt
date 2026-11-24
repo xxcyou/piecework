@@ -34,14 +34,15 @@ class MainActivity : FlutterActivity() {
     private var pendingPick: MethodChannel.Result? = null
 
     /**
-     * 安装下载好的 APK，返回 {ok, via, error} 给 Dart 看。
+     * 安装下载好的 APK —— 走**通用**路径，不依赖某台机器装了哪个安装器。
      *
-     * 三条路依次试，每一步都写 logcat（tag=piecework.install）：
-     * 1) FileProvider + ACTION_VIEW —— 系统安装器直接弹
-     * 2) PackageInstaller + 结果广播 —— 某些 ROM 不会自动弹安装界面，
-     *    必须收到 STATUS_PENDING_USER_ACTION 后自己 startActivity(EXTRA_INTENT)；
-     *    以前没接这个广播，表现就是「点了没反应」
-     * 3) 都失败 → 把真实异常回给 Dart
+     * 依次尝试，每一步都把失败原因记下来回给 Dart：
+     * A. FileProvider + ACTION_VIEW（Android 7+ 标准做法）
+     *    * 关键：给**每一个**能处理该 Intent 的安装器单独 grantUriPermission，
+     *      否则第三方安装器读不到 content:// 就静默退出（很多机型踩这个）
+     * B. PackageInstaller 会话（系统级 API，API 21+ 都有）
+     *    * 必须处理结果广播里的 STATUS_PENDING_USER_ACTION，见 InstallResultReceiver
+     * C. 把 APK 复制到「应用外部目录」再发一次 Intent（个别 ROM 只认外部路径）
      */
     private fun installApk(path: String, result: MethodChannel.Result) {
         val file = java.io.File(path)
@@ -50,10 +51,27 @@ class MainActivity : FlutterActivity() {
             return
         }
         android.util.Log.i("piecework.install", "start path=$path size=${file.length()}")
+        val errors = mutableListOf<String>()
 
-        // 1) PackageInstaller 会话 —— 系统自己的安装流程，不依赖「谁被设成默认安装器」。
-        //    关键：结果广播里 STATUS_PENDING_USER_ACTION 要自己 startActivity（见下方 Receiver），
-        //    以前没接，表现就是「点了没反应」。
+        // ── A. FileProvider + ACTION_VIEW ──
+        try {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                file,
+            )
+            if (launchInstallIntent(uri)) {
+                android.util.Log.i("piecework.install", "via=intent ok")
+                result.success(mapOf("ok" to true, "via" to "intent", "error" to ""))
+                return
+            }
+            errors.add("intent: 没有安装器能处理")
+        } catch (e: Exception) {
+            android.util.Log.i("piecework.install", "intent failed: ${e.message}")
+            errors.add("intent: ${e.message ?: e.javaClass.simpleName}")
+        }
+
+        // ── B. PackageInstaller ──
         try {
             val params = android.content.pm.PackageInstaller.SessionParams(
                 android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL,
@@ -78,45 +96,61 @@ class MainActivity : FlutterActivity() {
                 val pi = android.app.PendingIntent.getBroadcast(this, sessionId, intent, flags)
                 session.commit(pi.intentSender)
             }
-            android.util.Log.i("piecework.install", "PackageInstaller committed")
+            android.util.Log.i("piecework.install", "via=session committed")
             result.success(mapOf("ok" to true, "via" to "session", "error" to ""))
             return
         } catch (e: Exception) {
-            android.util.Log.i("piecework.install", "PackageInstaller failed: ${e.message}")
+            android.util.Log.i("piecework.install", "session failed: ${e.message}")
+            errors.add("session: ${e.message ?: e.javaClass.simpleName}")
         }
 
-        // 2) 兜底：FileProvider + ACTION_VIEW
+        // ── C. 外部目录再发一次 ──
         try {
+            val ext = java.io.File(getExternalFilesDir(null), "update")
+            if (!ext.exists()) ext.mkdirs()
+            val copy = java.io.File(ext, "piecework.apk")
+            file.copyTo(copy, overwrite = true)
             val uri = androidx.core.content.FileProvider.getUriForFile(
                 this,
                 "$packageName.fileprovider",
-                file,
+                copy,
             )
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            val handlers = packageManager.queryIntentActivities(intent, 0)
-            android.util.Log.i("piecework.install", "ACTION_VIEW handlers=${handlers.size}")
-            if (handlers.isNotEmpty()) {
-                startActivity(intent)
-                result.success(mapOf("ok" to true, "via" to "intent", "error" to ""))
+            if (launchInstallIntent(uri)) {
+                result.success(mapOf("ok" to true, "via" to "external", "error" to ""))
                 return
             }
-            result.success(
-                mapOf("ok" to false, "via" to "intent", "error" to "没有安装器能处理这个安装包"),
-            )
+            errors.add("external: 没有安装器能处理")
         } catch (e: Exception) {
-            android.util.Log.i("piecework.install", "ACTION_VIEW failed: ${e.message}")
-            result.success(
-                mapOf(
-                    "ok" to false,
-                    "via" to "intent",
-                    "error" to (e.message ?: e.javaClass.simpleName),
-                ),
-            )
+            errors.add("external: ${e.message ?: e.javaClass.simpleName}")
         }
+
+        result.success(
+            mapOf("ok" to false, "via" to "none", "error" to errors.joinToString(" | ")),
+        )
+    }
+
+    /** 发安装 Intent，并给所有能处理它的安装器授权读 URI */
+    private fun launchInstallIntent(uri: android.net.Uri): Boolean {
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val handlers = packageManager.queryIntentActivities(intent, 0)
+        android.util.Log.i("piecework.install", "handlers=${handlers.size}")
+        if (handlers.isEmpty()) return false
+        for (h in handlers) {
+            try {
+                grantUriPermission(
+                    h.activityInfo.packageName,
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            } catch (_: Exception) {
+            }
+        }
+        startActivity(intent)
+        return true
     }
 
     /** 打开「安装未知应用」设置页（Dart 侧按钮用） */
