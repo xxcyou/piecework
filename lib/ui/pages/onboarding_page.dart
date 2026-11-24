@@ -1,164 +1,136 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// 首次启动的欢迎引导（3 屏）。
+import '../../providers/db_providers.dart';
+import '../widgets/secure_backup_card.dart';
+
+/// 首次启动的引导（4 步，不能一路跳过）。
 ///
-/// 返回 true 表示用户想「顺便把防丢失备份打开」。
-class OnboardingPage extends StatefulWidget {
+/// 顺序是刻意的：**先保住数据，再谈功能**。
+/// 1. 欢迎
+/// 2. 数据安全（加密自动备份，真实卡片，能直接授权文件夹/设密码）
+/// 3. 身份卡（我叫什么，可选再加一个人）
+/// 4. 开始
+class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
 
   @override
-  State<OnboardingPage> createState() => _OnboardingPageState();
+  ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
 }
 
-class _OnboardingPageState extends State<OnboardingPage> {
+class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final PageController _ctrl = PageController();
+  final TextEditingController _nameCtrl = TextEditingController(text: '我');
+  final TextEditingController _mateCtrl = TextEditingController();
   int _page = 0;
-
-  static const List<_Slide> _slides = <_Slide>[
-    _Slide(
-      icon: Icons.receipt_long_outlined,
-      title: '记一条，算一条',
-      body: '拍下货物实拍（方便以后认货），填型号 / 颜色 / 码数 / 数量 / 单价，'
-          '工钱自动算好，不用再拿计算器对着单子加。',
-    ),
-    _Slide(
-      icon: Icons.auto_awesome,
-      title: '想查什么，直接问',
-      body: '「本周多少件」「哪个款做得最多」「这周比上周怎么样」——'
-          '用大白话问就行，AI 会查本机数据再回答，不会瞎编数字。',
-    ),
-    _Slide(
-      icon: Icons.shield_outlined,
-      title: '数据别丢，开个备份',
-      body: '开启加密自动备份后，数据会加密存到你选的公共文件夹。'
-          '卸载、换手机、清数据都还在，重装后一键找回。',
-    ),
-  ];
 
   @override
   void dispose() {
     _ctrl.dispose();
+    _nameCtrl.dispose();
+    _mateCtrl.dispose();
     super.dispose();
   }
 
-  void _next() {
-    if (_page >= _slides.length - 1) {
-      Navigator.of(context).pop(false);
-      return;
-    }
-    _ctrl.nextPage(
+  void _go(int page) {
+    setState(() => _page = page);
+    _ctrl.animateToPage(
+      page,
       duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOut,
+      curve: Curves.easeOutCubic,
     );
+  }
+
+  Future<void> _finish() async {
+    // 1) 身份卡名字（默认身份直接改名）
+    final repo = ref.read(profileRepoProvider);
+    final list = await repo.all(includeArchived: true);
+    final def = list.where((p) => p.isDefault).firstOrNull ?? list.firstOrNull;
+    final name = _nameCtrl.text.trim();
+    if (def != null && name.isNotEmpty && name != def.name) {
+      def.name = name;
+      await repo.update(def);
+    }
+    // 2) 可选：再加一个人
+    final mate = _mateCtrl.text.trim();
+    if (mate.isNotEmpty) {
+      await repo.create(mate);
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final last = _page == _slides.length - 1;
-
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('跳过', style: TextStyle(fontSize: 12.5)),
+            // 步骤指示
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: Row(
+                children: <Widget>[
+                  for (var i = 0; i < 4; i++)
+                    Expanded(
+                      child: Container(
+                        height: 3,
+                        margin: EdgeInsets.only(right: i == 3 ? 0 : 5),
+                        decoration: BoxDecoration(
+                          color: i <= _page
+                              ? scheme.primary
+                              : scheme.outlineVariant.withAlpha(120),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             Expanded(
-              child: PageView.builder(
+              child: PageView(
                 controller: _ctrl,
-                itemCount: _slides.length,
+                physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (i) => setState(() => _page = i),
-                itemBuilder: (_, i) {
-                  final s = _slides[i];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Container(
-                          width: 96,
-                          height: 96,
-                          decoration: BoxDecoration(
-                            color: scheme.primary.withAlpha(20),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(s.icon, size: 44, color: scheme.primary),
-                        ),
-                        const SizedBox(height: 28),
-                        Text(
-                          s.title,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          s.body,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.75,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                children: <Widget>[
+                  _welcome(scheme),
+                  _backupStep(scheme),
+                  _profileStep(scheme),
+                  _doneStep(scheme),
+                ],
               ),
             ),
-            // 小圆点
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                for (var i = 0; i < _slides.length; i++)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: i == _page ? 18 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: i == _page
-                          ? scheme.primary
-                          : scheme.outlineVariant,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 24),
+            // 底部按钮
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-              child: Column(
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
+              child: Row(
                 children: <Widget>[
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _next,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: Text(last ? '开始使用' : '下一步'),
+                  if (_page > 0)
+                    TextButton(
+                      onPressed: () => _go(_page - 1),
+                      child: const Text('上一步'),
+                    )
+                  else
+                    const SizedBox(width: 8),
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: () {
+                      if (_page == 3) {
+                        _finish();
+                      } else {
+                        _go(_page + 1);
+                      }
+                    },
+                    child: Text(
+                      switch (_page) {
+                        0 => '开始',
+                        1 => '好了，下一步',
+                        2 => '下一步',
+                        _ => '开始计件',
+                      },
                     ),
                   ),
-                  if (last) ...<Widget>[
-                    const SizedBox(height: 6),
-                    TextButton(
-                      // 直接带用户去设置备份（返回 true 让上层起引导）
-                      onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text(
-                        '先帮我把备份打开',
-                        style: TextStyle(fontSize: 12.5),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -167,12 +139,136 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ),
     );
   }
-}
 
-class _Slide {
-  const _Slide({required this.icon, required this.title, required this.body});
+  // ── 1. 欢迎 ──
+  Widget _welcome(ColorScheme scheme) => ListView(
+        padding: const EdgeInsets.fromLTRB(24, 40, 24, 12),
+        children: <Widget>[
+          Container(
+            width: 64,
+            height: 64,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.primary.withAlpha(22),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(Icons.inventory_2_outlined,
+                size: 32, color: scheme.primary),
+          ),
+          const SizedBox(height: 18),
+          const Text('计件助手',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text('记件数、算工钱、出报表，数据只存本机。',
+              style: TextStyle(
+                  fontSize: 13,
+                  height: 1.6,
+                  color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 26),
+          for (final e in <(IconData, String, String)>[
+            (Icons.shield_outlined, '数据先保住', '先花 1 分钟设好加密备份，换机重装都能恢复'),
+            (Icons.add_a_photo_outlined, '一条记录一张图', '拍下货物，型号颜色码数数量单价记清楚'),
+            (Icons.auto_awesome_outlined, '想问就问', '「本周多少件」直接问，AI 查本机数据回答'),
+          ]) ...<Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(e.$1, size: 18, color: scheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(e.$2,
+                          style: const TextStyle(
+                              fontSize: 13.5, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text(e.$3,
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              height: 1.5,
+                              color: scheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ],
+      );
 
-  final IconData icon;
-  final String title;
-  final String body;
+  // ── 2. 数据安全 ──
+  Widget _backupStep(ColorScheme scheme) => ListView(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+        children: <Widget>[
+          const Text('先把数据保住',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text('设置加密备份后，每改一次数据就自动存一份到手机里，'
+              '重装 App 也能恢复。密码自己记住，忘了打不开。',
+              style: TextStyle(
+                  fontSize: 12, height: 1.6, color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 14),
+          const SecureBackupSection(),
+          const SizedBox(height: 10),
+          Text('不想现在设也可以，之后在「设置 → 备份」里随时能开。',
+              style: TextStyle(
+                  fontSize: 10.5, color: scheme.onSurfaceVariant)),
+        ],
+      );
+
+  // ── 3. 身份卡 ──
+  Widget _profileStep(ColorScheme scheme) => ListView(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+        children: <Widget>[
+          const Text('你叫什么',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text('记录会记在这个名字下。手底下还有人的话，可以再加一个。',
+              style: TextStyle(
+                  fontSize: 12, height: 1.6, color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _nameCtrl,
+            decoration: const InputDecoration(
+              labelText: '我的名字',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _mateCtrl,
+            decoration: const InputDecoration(
+              labelText: '再加一个人（可留空）',
+              hintText: '例如 张三',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text('以后在设置 → 身份卡里可以随时增删改。',
+              style: TextStyle(
+                  fontSize: 10.5, color: scheme.onSurfaceVariant)),
+        ],
+      );
+
+  // ── 4. 完成 ──
+  Widget _doneStep(ColorScheme scheme) => ListView(
+        padding: const EdgeInsets.fromLTRB(24, 40, 24, 12),
+        children: <Widget>[
+          Icon(Icons.check_circle_outline, size: 48, color: scheme.primary),
+          const SizedBox(height: 14),
+          const Text('可以开始记了',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text('首页右下角「+」记第一条。\n'
+              '想不起来怎么用，就去「设置 → 教程」，点哪条教哪条。',
+              style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.7,
+                  color: scheme.onSurfaceVariant)),
+        ],
+      );
 }

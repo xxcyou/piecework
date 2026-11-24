@@ -81,11 +81,7 @@ Future<void> showProfileSwitcher(BuildContext context, WidgetRef ref) async {
                     style:
                         TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                 const Spacer(),
-                Text(
-                  '数据按身份隔离，互不影响',
-                  style: TextStyle(
-                      fontSize: 10.5, color: scheme.onSurfaceVariant),
-                ),
+
               ],
             ),
           ),

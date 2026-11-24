@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2006,
-    "versionName": "1.0.5",
+    "versionCode": 2008,
+    "versionName": "1.0.7",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 更新弹窗排版修正（两个按钮：稍后 / 立即更新，忽略入口收进内容区）\n· 应用内自动更新：下载 APK 直接调起系统安装器，不再跳浏览器\n· 多身份卡 / 颜色取色 / 多选汇总 / WebDAV 云备份",
+    "notes": "· 首次引导重做：先设数据安全（加密备份），再填身份卡；不再一进来弹恢复数据\n· 文案精简\n· 应用内自动更新（下载后直接调起安装）",
     "force": false
   }
 }

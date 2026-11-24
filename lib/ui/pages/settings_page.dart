@@ -21,6 +21,7 @@ import '../../providers/ui_providers.dart';
 import 'ai_settings_page.dart';
 import 'about_page.dart';
 import 'gallery_page.dart';
+import 'onboarding_page.dart';
 import 'profiles_page.dart';
 import 'webdav_page.dart';
 import '../widgets/tutorials.dart';
@@ -244,6 +245,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 40),
             children: <Widget>[
               _sectionTitle('新手教程', scheme),
+              _tile(
+                scheme,
+                icon: Icons.waving_hand_outlined,
+                title: '重看首次引导',
+                subtitle: '数据安全 / 身份卡 那几步，重新走一遍',
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const OnboardingPage(),
+                  ),
+                ),
+              ),
               _tile(
                 scheme,
                 icon: Icons.school_outlined,

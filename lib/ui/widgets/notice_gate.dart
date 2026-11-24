@@ -166,7 +166,7 @@ class _StoppedPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  message.isEmpty ? '作者暂时关闭了这个版本，请稍后再来。' : message,
+                  message.isEmpty ? '暂时关闭，请稍后再试。' : message,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,

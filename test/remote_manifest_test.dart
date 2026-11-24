@@ -30,7 +30,7 @@ void main() {
           'active': true,
         },
         latest: <String, dynamic>{
-          'versionCode': 2002,
+          'versionCode': kAppVersionCode + 1,
           'versionName': '1.0.1',
           'apkUrl': 'https://x/y.apk',
           'notes': '修复',
@@ -40,7 +40,7 @@ void main() {
       expect(m!.operating, isTrue);
       expect(m.publicNotice!.level, NoticeLevel.critical);
       expect(m.publicNotice!.visible, isTrue);
-      expect(m.latest!.versionCode, 2002);
+      expect(m.latest!.versionCode, kAppVersionCode + 1);
       expect(m.latest!.isNewer, isTrue);
     });
 
@@ -91,7 +91,7 @@ void main() {
       final m = RemoteManifest.fromJson(manifestJson(
         notice: <String, dynamic>{'id': 'n1', 'title': 't', 'body': 'b'},
         latest: <String, dynamic>{
-          'versionCode': 3000,
+          'versionCode': kAppVersionCode + 10,
           'versionName': '3.0.0',
           'apkUrl': 'https://x',
         },
@@ -101,7 +101,7 @@ void main() {
       )!;
       expect(back.operating, m.operating);
       expect(back.publicNotice!.id, 'n1');
-      expect(back.latest!.versionCode, 3000);
+      expect(back.latest!.versionCode, kAppVersionCode + 10);
     });
   });
 

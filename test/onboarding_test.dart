@@ -1,82 +1,68 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piecework/ui/pages/onboarding_page.dart';
 
+/// 首次引导：4 步，**数据安全在前**
+///
+/// 注意：第 2 步用到 SecureBackupSection（读 Isar/文件），
+/// 这里只验证页面结构、步骤推进和文案顺序，不点真实备份按钮。
 void main() {
-  Future<void> pumpOnboarding(WidgetTester tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).push<bool>(
-                  MaterialPageRoute<bool>(builder: (_) => const OnboardingPage()),
-                ),
-                child: const Text('open'),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('open'));
+  Widget wrap() => const ProviderScope(
+        child: MaterialApp(home: OnboardingPage()),
+      );
+
+  testWidgets('第 1 步是欢迎，且有 4 段进度', (tester) async {
+    await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();
-  }
-
-  testWidgets('首次引导：3 屏，能一路点到最后', (tester) async {
-    await pumpOnboarding(tester);
-
-    // 第 1 屏
-    expect(find.text('记一条，算一条'), findsOneWidget);
-    expect(find.text('下一步'), findsOneWidget);
-    expect(find.text('开始使用'), findsNothing);
-
-    await tester.tap(find.text('下一步'));
-    await tester.pumpAndSettle();
-
-    // 第 2 屏
-    expect(find.text('想查什么，直接问'), findsOneWidget);
-
-    await tester.tap(find.text('下一步'));
-    await tester.pumpAndSettle();
-
-    // 第 3 屏：出现「开始使用」+「先帮我把备份打开」
-    expect(find.text('数据别丢，开个备份'), findsOneWidget);
-    expect(find.text('开始使用'), findsOneWidget);
-    expect(find.text('先帮我把备份打开'), findsOneWidget);
+    expect(find.text('计件助手'), findsOneWidget);
+    expect(find.text('数据先保住'), findsOneWidget); // 卖点第一条就是数据
+    expect(find.text('开始'), findsOneWidget);
   });
 
-  testWidgets('点「开始使用」返回 false（不需要起备份引导）', (tester) async {
-    await pumpOnboarding(tester);
-    await tester.tap(find.text('下一步'));
+  testWidgets('没有「一路跳过」：不提供跳过按钮', (tester) async {
+    await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('下一步'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('开始使用'));
-    await tester.pumpAndSettle();
-    // 回到调用页
-    expect(find.text('open'), findsOneWidget);
+    expect(find.text('跳过'), findsNothing);
   });
 
-  testWidgets('点「先帮我把备份打开」返回 true', (tester) async {
-    await pumpOnboarding(tester);
-    await tester.tap(find.text('下一步'));
+  testWidgets('第 2 步是数据安全（备份），在身份卡之前', (tester) async {
+    await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('下一步'));
+    await tester.tap(find.text('开始'));
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('先帮我把备份打开'));
-    await tester.pumpAndSettle();
-    expect(find.text('open'), findsOneWidget);
+    expect(find.text('先把数据保住'), findsOneWidget);
+    // 这一步不能跳过（底部只有「上一步 / 好了，下一步」）
+    expect(find.text('好了，下一步'), findsOneWidget);
+    expect(find.text('上一步'), findsOneWidget);
   });
 
-  testWidgets('跳过能直接退出', (tester) async {
-    await pumpOnboarding(tester);
-    expect(find.text('跳过'), findsOneWidget);
-    await tester.tap(find.text('跳过'));
+  testWidgets('第 3 步是身份卡，默认名字「我」', (tester) async {
+    await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();
-    expect(find.text('open'), findsOneWidget);
+    await tester.tap(find.text('开始'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('好了，下一步'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('你叫什么'), findsOneWidget);
+    expect(find.text('我'), findsOneWidget); // 默认值
+    expect(find.text('再加一个人（可留空）'), findsOneWidget);
+  });
+
+  testWidgets('最后一步是「开始计件」', (tester) async {
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+    for (final label in <String>['开始', '好了，下一步', '下一步']) {
+      await tester.tap(find.text(label));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('可以开始记了'), findsOneWidget);
+    expect(find.text('开始计件'), findsOneWidget);
   });
 }

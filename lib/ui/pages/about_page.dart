@@ -167,7 +167,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text('扫码加好友：反馈问题、提需求都可以',
+                  Text('扫码加好友',
                       style: TextStyle(
                           fontSize: 11, color: scheme.onSurfaceVariant)),
                   const SizedBox(height: 10),
@@ -205,7 +205,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
               leading: const Icon(Icons.system_update_alt),
               title: const Text('检查更新'),
               subtitle: Text(
-                _msg ?? '从 GitHub 拉最新版本（走加速通道）',
+                _msg ?? '检查 GitHub 上的最新版本',
                 style: TextStyle(
                   fontSize: 10.5,
                   color: _msg != null && _msg!.startsWith('检查失败')
@@ -255,17 +255,11 @@ class _AboutPageState extends ConsumerState<AboutPage> {
           ],
 
           const SizedBox(height: 16),
-          Text('预览（模拟）',
+          Text('预览',
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: scheme.onSurfaceVariant)),
-          const SizedBox(height: 6),
-          Text(
-            '发布公告/新版之前，可以先看看弹窗长什么样。点「立即更新」只会打开项目主页。',
-            style: TextStyle(
-                fontSize: 10.5, height: 1.5, color: scheme.onSurfaceVariant),
-          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -287,8 +281,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   preview: true,
                 ),
                 icon: const Icon(Icons.system_update_alt, size: 16),
-                label: const Text('模拟更新弹窗',
-                    style: TextStyle(fontSize: 11.5)),
+                label: const Text('更新弹窗', style: TextStyle(fontSize: 11.5)),
               ),
               OutlinedButton.icon(
                 onPressed: () => showNoticeDialog(
@@ -304,14 +297,13 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   ),
                 ),
                 icon: const Icon(Icons.campaign_outlined, size: 16),
-                label: const Text('模拟公告弹窗',
-                    style: TextStyle(fontSize: 11.5)),
+                label: const Text('公告弹窗', style: TextStyle(fontSize: 11.5)),
               ),
               OutlinedButton.icon(
                 onPressed: () => showDialog<void>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('停运页长这样'),
+                    title: const Text('停运页'),
                     content: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
@@ -323,7 +315,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                                 fontSize: 16, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 6),
                         Text(
-                          '（预览）系统维护中，预计今晚 22:00 恢复',
+                          '系统维护中，预计今晚 22:00 恢复',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontSize: 12, color: scheme.onSurfaceVariant),
@@ -339,20 +331,9 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   ),
                 ),
                 icon: const Icon(Icons.pause_circle_outline, size: 16),
-                label: const Text('模拟停运页',
-                    style: TextStyle(fontSize: 11.5)),
+                label: const Text('停运页', style: TextStyle(fontSize: 11.5)),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '纯本地 App：数据只存本机（Isar），照片不进系统相册；'
-            '只有 AI 请求和你配置的 WebDAV 云备份会走网络。',
-            style: TextStyle(
-              fontSize: 10.5,
-              height: 1.6,
-              color: scheme.onSurfaceVariant,
-            ),
           ),
         ],
       ),

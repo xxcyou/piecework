@@ -66,16 +66,11 @@ Future<String?> showUpdateDialog(
                 ),
               ],
               const SizedBox(height: 10),
-              Text(
-                preview
-                    ? '（模拟预览，不会真的下载）'
-                    : '点「立即更新」会在 App 内下载并直接调起系统安装，覆盖安装，数据不丢。',
-                style: TextStyle(
-                  fontSize: 11,
-                  height: 1.4,
-                  color: preview ? scheme.primary : scheme.onSurfaceVariant,
+              if (preview)
+                Text(
+                  '预览',
+                  style: TextStyle(fontSize: 11, color: scheme.primary),
                 ),
-              ),
               if (!r.force && !preview) ...<Widget>[
                 const SizedBox(height: 2),
                 Align(
@@ -89,7 +84,7 @@ Future<String?> showUpdateDialog(
                       foregroundColor: scheme.onSurfaceVariant,
                       textStyle: const TextStyle(fontSize: 11),
                     ),
-                    child: const Text('忽略这个版本（下次再说）'),
+                    child: const Text('忽略此版本'),
                   ),
                 ),
               ],
@@ -109,7 +104,7 @@ Future<String?> showUpdateDialog(
         FilledButton.icon(
           onPressed: () => Navigator.of(ctx).pop('go'),
           icon: const Icon(Icons.download_rounded, size: 17),
-          label: Text(preview ? '看看效果' : '立即更新'),
+          label: Text(preview ? '预览' : '更新'),
         ),
       ],
     ),
@@ -197,7 +192,7 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
     builder: (ctx) => PopScope(
       canPop: false,
       child: AlertDialog(
-        title: const Text('正在下载更新'),
+        title: const Text('下载中'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,14 +222,7 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              '下载完成后会直接调起系统安装器，覆盖安装，数据不丢。',
-              style: TextStyle(
-                fontSize: 11,
-                color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-              ),
-            ),
+
           ],
         ),
       ),
@@ -264,7 +252,7 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
 
   if (result.ok) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('下载完成，请在系统弹窗里点「安装」')),
+      const SnackBar(content: Text('下载完成，去系统弹窗点「安装」')),
     );
     return;
   }
@@ -274,18 +262,15 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
   final retry = await showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text(needPerm ? '需要允许安装' : '自动更新失败'),
+      title: Text(needPerm ? '需要允许安装' : '更新失败'),
       content: Text(
-        needPerm
-            ? '系统里还没允许本应用「安装未知应用」。\n'
-                '刚才已经帮你打开设置页，允许之后再点一次「立即更新」即可。'
-            : '原因：${result.message}',
+        needPerm ? '打开「安装未知应用」权限后重试。' : '${result.message}',
         style: const TextStyle(fontSize: 12.5, height: 1.5),
       ),
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(ctx).pop('browser'),
-          child: const Text('用浏览器下载'),
+          child: const Text('浏览器下载'),
         ),
         FilledButton(
           onPressed: () => Navigator.of(ctx).pop('ok'),

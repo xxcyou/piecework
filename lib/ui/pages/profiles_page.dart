@@ -82,10 +82,7 @@ class _ProfilesPageState extends ConsumerState<ProfilesPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除这个身份卡？'),
-        content: Text(
-          '「${p.name}」下的 $n 条记录会一起进回收站（30 天内可恢复），'
-          '不会真正丢失。',
-        ),
+        content: Text('「${p.name}」的 $n 条记录会进回收站，30 天内可恢复。'),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -162,16 +159,7 @@ class _ProfilesPageState extends ConsumerState<ProfilesPage> {
         data: (list) => ListView(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
           children: <Widget>[
-            Text(
-              '每个身份卡的记录、报表、AI 对话都是独立的；'
-              '切换身份后 AI 只能看到当前身份的账。',
-              style: TextStyle(
-                fontSize: 11.5,
-                height: 1.5,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
             for (final p in list)
               Card(
                 margin: const EdgeInsets.only(bottom: 8),
