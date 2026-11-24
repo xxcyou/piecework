@@ -156,6 +156,11 @@ const AppSettingSchema = CollectionSchema(
       id: 27,
       name: r'webdavUser',
       type: IsarType.string,
+    ),
+    r'workMode': PropertySchema(
+      id: 28,
+      name: r'workMode',
+      type: IsarType.long,
     )
   },
   estimateSize: _appSettingEstimateSize,
@@ -229,6 +234,7 @@ void _appSettingSerialize(
   writer.writeString(offsets[25], object.webdavPass);
   writer.writeString(offsets[26], object.webdavUrl);
   writer.writeString(offsets[27], object.webdavUser);
+  writer.writeLong(offsets[28], object.workMode);
 }
 
 AppSetting _appSettingDeserialize(
@@ -267,6 +273,7 @@ AppSetting _appSettingDeserialize(
   object.webdavPass = reader.readString(offsets[25]);
   object.webdavUrl = reader.readString(offsets[26]);
   object.webdavUser = reader.readString(offsets[27]);
+  object.workMode = reader.readLong(offsets[28]);
   return object;
 }
 
@@ -333,6 +340,8 @@ P _appSettingDeserializeProp<P>(
       return (reader.readString(offset)) as P;
     case 27:
       return (reader.readString(offset)) as P;
+    case 28:
+      return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -3055,6 +3064,60 @@ extension AppSettingQueryFilter
       ));
     });
   }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition> workModeEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'workMode',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      workModeGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'workMode',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition> workModeLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'workMode',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition> workModeBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'workMode',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
 }
 
 extension AppSettingQueryObject
@@ -3413,6 +3476,18 @@ extension AppSettingQuerySortBy
   QueryBuilder<AppSetting, AppSetting, QAfterSortBy> sortByWebdavUserDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'webdavUser', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> sortByWorkMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workMode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> sortByWorkModeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workMode', Sort.desc);
     });
   }
 }
@@ -3781,6 +3856,18 @@ extension AppSettingQuerySortThenBy
       return query.addSortBy(r'webdavUser', Sort.desc);
     });
   }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> thenByWorkMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workMode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> thenByWorkModeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workMode', Sort.desc);
+    });
+  }
 }
 
 extension AppSettingQueryWhereDistinct
@@ -3972,6 +4059,12 @@ extension AppSettingQueryWhereDistinct
       return query.addDistinctBy(r'webdavUser', caseSensitive: caseSensitive);
     });
   }
+
+  QueryBuilder<AppSetting, AppSetting, QDistinct> distinctByWorkMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'workMode');
+    });
+  }
 }
 
 extension AppSettingQueryProperty
@@ -4152,6 +4245,12 @@ extension AppSettingQueryProperty
   QueryBuilder<AppSetting, String, QQueryOperations> webdavUserProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'webdavUser');
+    });
+  }
+
+  QueryBuilder<AppSetting, int, QQueryOperations> workModeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'workMode');
     });
   }
 }

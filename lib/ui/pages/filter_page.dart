@@ -216,12 +216,12 @@ class _FilterPageState extends ConsumerState<FilterPage> {
           ),
           const SizedBox(height: 12),
           _Section(
-            title: '上报状态',
+            title: '结算状态',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  '默认只看未上报的 —— 已经上报给公司的不会再冒出来。',
+                  '默认只看未结算的 —— 已经结算过的不再冒出来。',
                   style: TextStyle(
                     fontSize: 11,
                     height: 1.5,

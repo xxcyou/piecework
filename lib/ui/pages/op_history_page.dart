@@ -7,7 +7,7 @@ import '../../providers/chat_providers.dart';
 import '../../providers/db_providers.dart';
 import '../../providers/records_providers.dart';
 
-/// 操作历史：所有写操作（新增/修改/删除/上报）都在这里，任何一条都能撤回。
+/// 操作历史：所有写操作（新增/修改/删除/结算）都在这里，任何一条都能撤回。
 ///
 /// 保留 30 天，和回收站同一个周期。
 class OpHistoryPage extends ConsumerWidget {
@@ -41,7 +41,7 @@ class OpHistoryPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '新增、修改、删除、上报都会记在这里，可随时撤回',
+                    '新增、修改、删除、结算都会记在这里，可随时撤回',
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant.withAlpha(170),

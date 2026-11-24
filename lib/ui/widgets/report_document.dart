@@ -7,6 +7,7 @@ import '../../data/models/piece_record.dart';
 import '../../data/models/record_filter.dart';
 import '../../data/services/photo_service.dart';
 import '../../data/services/unit_converter.dart';
+import '../../data/services/salary_summary.dart';
 import '../../providers/units_providers.dart';
 
 /// 报表画布 —— 按「给别人看、能对账」的标准做。
@@ -31,6 +32,8 @@ class ReportDocument extends ConsumerWidget {
     required this.generatedAt,
     required this.rangeText,
     this.groupBy = GroupField.day,
+    this.profileName = '',
+    this.salaryMode = false,
   });
 
   final String title;
@@ -46,6 +49,12 @@ class ReportDocument extends ConsumerWidget {
 
   /// 分组方式：按日期 / 按型号 / 不分组
   final GroupField groupBy;
+
+  /// 身份卡名字（报表标题下方显示，方便对账看单）
+  final String profileName;
+
+  /// 工资模式：同款汇总成「工资卡」，不带日期明细
+  final bool salaryMode;
 
   int get _totalMilli => records.fold(0, (a, r) => a + r.subtotalMilli);
 
@@ -71,6 +80,7 @@ class ReportDocument extends ConsumerWidget {
       builder: (context, constraints) {
         // 以 400 逻辑像素为基准缩放字号，窄屏不挤、宽屏不空
         final k = (constraints.maxWidth / 400).clamp(0.82, 1.7) * fontScale;
+        if (salaryMode) return _salarySheet(k, converter);
         return Container(
           color: Colors.white,
           padding: EdgeInsets.fromLTRB(16 * k, 18 * k, 16 * k, 16 * k),
@@ -89,6 +99,186 @@ class ReportDocument extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  /// 工资卡：同款汇总（型号/颜色/码数 · 数量 · 单价 · 金额），不带日期
+  Widget _salarySheet(double k, UnitConverter converter) {
+    final groups = groupSalary(records, converter);
+    var totalCenti = 0;
+    for (final r in records) {
+      totalCenti += converter.centiBaseOf(r).toInt();
+    }
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.fromLTRB(16 * k, 18 * k, 16 * k, 16 * k),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            title.isEmpty ? '工资表' : title,
+            style: TextStyle(
+              fontSize: 20 * k,
+              height: 1.2,
+              fontWeight: FontWeight.w800,
+              color: _ink,
+            ),
+          ),
+          SizedBox(height: 4 * k),
+          Row(
+            children: <Widget>[
+              if (profileName.isNotEmpty) ...<Widget>[
+                Text('身份：$profileName',
+                    style: TextStyle(
+                        fontSize: 11.5 * k,
+                        fontWeight: FontWeight.w600,
+                        color: _ink2)),
+                SizedBox(width: 10 * k),
+              ],
+              Text('共 ${groups.length} 款 / ${records.length} 条',
+                  style: TextStyle(fontSize: 11 * k, color: _ink3)),
+            ],
+          ),
+          SizedBox(height: 10 * k),
+          // 表头
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 6 * k),
+            decoration: const BoxDecoration(
+              border: Border(
+                top: BorderSide(color: _line),
+                bottom: BorderSide(color: _line),
+              ),
+            ),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  flex: 5,
+                  child: Text('款号 / 颜色 / 码数',
+                      style: TextStyle(
+                          fontSize: 10.5 * k,
+                          fontWeight: FontWeight.w700,
+                          color: _ink2)),
+                ),
+                SizedBox(
+                  width: 62 * k,
+                  child: Text('数量',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                          fontSize: 10.5 * k,
+                          fontWeight: FontWeight.w700,
+                          color: _ink2)),
+                ),
+                SizedBox(
+                  width: 56 * k,
+                  child: Text('单价',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                          fontSize: 10.5 * k,
+                          fontWeight: FontWeight.w700,
+                          color: _ink2)),
+                ),
+                SizedBox(
+                  width: 74 * k,
+                  child: Text('金额',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                          fontSize: 10.5 * k,
+                          fontWeight: FontWeight.w700,
+                          color: _ink2)),
+                ),
+              ],
+            ),
+          ),
+          for (final g in groups)
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 7 * k),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: _line)),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    flex: 5,
+                    child: Text(
+                      g.label,
+                      style: TextStyle(
+                          fontSize: 12 * k, height: 1.3, color: _ink),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 62 * k,
+                    child: Text(
+                      g.unit == converter.baseUnit
+                          ? '${g.qty}'
+                          : '${(g.centiBase / 100).toStringAsFixed(2)}',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(fontSize: 12 * k, color: _ink),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 56 * k,
+                    child: Text(
+                      g.unitPrice == 0
+                          ? '—'
+                          : Money.plain(Money.toMilli(g.unitPrice)),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(fontSize: 11.5 * k, color: _ink2),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 74 * k,
+                    child: Text(
+                      Money.format(g.amountMilli),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                          fontSize: 12 * k,
+                          fontWeight: FontWeight.w700,
+                          color: _ink),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          SizedBox(height: 10 * k),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10 * k, vertical: 10 * k),
+            decoration: BoxDecoration(
+              color: _band,
+              borderRadius: BorderRadius.circular(8 * k),
+            ),
+            child: Row(
+              children: <Widget>[
+                Text('合计',
+                    style: TextStyle(
+                        fontSize: 12 * k,
+                        fontWeight: FontWeight.w700,
+                        color: _ink2)),
+                SizedBox(width: 8 * k),
+                Text(
+                  '${(totalCenti / 100).toStringAsFixed(totalCenti % 100 == 0 ? 0 : 2)} '
+                  '${converter.baseUnit}',
+                  style: TextStyle(fontSize: 12 * k, color: _ink2),
+                ),
+                const Spacer(),
+                Text(
+                  Money.format(_totalMilli),
+                  style: TextStyle(
+                    fontSize: 17 * k,
+                    fontWeight: FontWeight.w800,
+                    color: _accent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 10 * k),
+          Text(
+            '数量按「${converter.baseUnit}」折算；单价为空的条目不计金额。',
+            style: TextStyle(fontSize: 9.5 * k, color: _ink3),
+          ),
+        ],
+      ),
     );
   }
 
@@ -119,6 +309,17 @@ class ReportDocument extends ConsumerWidget {
             ),
           ],
         ),
+        if (profileName.isNotEmpty) ...<Widget>[
+          SizedBox(height: 4 * k),
+          Text(
+            '身份：$profileName',
+            style: TextStyle(
+              fontSize: 11.5 * k,
+              fontWeight: FontWeight.w600,
+              color: _ink2,
+            ),
+          ),
+        ],
         if (subtitle.isNotEmpty) ...<Widget>[
           SizedBox(height: 3 * k),
           Text(

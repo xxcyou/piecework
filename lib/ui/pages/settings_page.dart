@@ -19,6 +19,7 @@ import '../../providers/records_providers.dart';
 import '../../providers/license_providers.dart';
 import '../../providers/settings_providers.dart';
 import '../../providers/ui_providers.dart';
+import '../../providers/work_mode_provider.dart';
 import '../widgets/ai_lock.dart';
 import 'ai_settings_page.dart';
 import 'about_page.dart';
@@ -233,6 +234,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final activated = ref.watch(aiActivatedProvider);
+    final workMode = ref.watch(workModeProvider);
     final settings = ref.watch(settingsProvider).valueOrNull;
     final aiConfig = ref.watch(aiConfigProvider);
     final scheme = Theme.of(context).colorScheme;
@@ -351,6 +353,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               _tile(
                 scheme,
+                icon: Icons.tune,
+                title: '工作模式',
+                subtitle: workMode == 0
+                    ? '工资模式 · 同款自动汇总，给员工看工资'
+                    : '会计模式 · 逐条明细，用来查数据',
+                trailing: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withAlpha(20),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    workMode == 0 ? '工资' : '会计',
+                    style: TextStyle(fontSize: 10, color: scheme.primary),
+                  ),
+                ),
+                onTap: () => _pickWorkMode(context, ref),
+              ),
+              _tile(
+                scheme,
                 icon: Icons.workspace_premium_outlined,
                 title: 'AI 激活',
                 subtitle: activated ? '已激活' : '未激活 · 点这里输入激活码',
@@ -435,7 +458,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 scheme,
                 icon: Icons.history,
                 title: '操作历史',
-                subtitle: '所有新增/修改/删除/上报都能撤回（保留 30 天）',
+                subtitle: '所有新增/修改/删除/结算都能撤回（保留 30 天）',
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute<void>(builder: (_) => const OpHistoryPage()),
                 ),
@@ -603,6 +626,53 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           : Colors.white,
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: scheme.outlineVariant.withAlpha(140)),
+    );
+  }
+
+  Future<void> _pickWorkMode(BuildContext context, WidgetRef ref) async {
+    final mode = ref.read(workModeProvider);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(18, 0, 18, 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('工作模式',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+              ),
+            ),
+            RadioListTile<int>(
+              value: 0,
+              groupValue: mode,
+              onChanged: (v) async {
+                Navigator.of(ctx).pop();
+                await setWorkMode(ref, 0);
+              },
+              title: const Text('工资模式', style: TextStyle(fontSize: 13.5)),
+              subtitle: const Text('同款自动汇总，不显示日期；报表是工资卡样式',
+                  style: TextStyle(fontSize: 10.5)),
+            ),
+            RadioListTile<int>(
+              value: 1,
+              groupValue: mode,
+              onChanged: (v) async {
+                Navigator.of(ctx).pop();
+                await setWorkMode(ref, 1);
+              },
+              title: const Text('会计模式', style: TextStyle(fontSize: 13.5)),
+              subtitle: const Text('逐条明细 + 日期，用来查数据',
+                  style: TextStyle(fontSize: 10.5)),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 

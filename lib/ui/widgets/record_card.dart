@@ -161,10 +161,10 @@ class RecordCard extends StatelessWidget {
                             color: scheme.outline,
                             icon: Icons.image_not_supported_outlined,
                           ),
-                        // 已上报的打个灰标，一眼能区分
+                        // 已结算的打个灰标，一眼能区分
                         if (record.isReported)
                           TagChip(
-                            label: '已上报',
+                            label: '已结算',
                             dense: true,
                             color: const Color(0xFF0E9F6E),
                             icon: Icons.check_circle_outline,

@@ -75,6 +75,17 @@ class UpdateInstaller {
     }
   }
 
+  /// 把安装包存到系统「下载」目录，返回可点开的地址（最后的兜底）
+  Future<String?> exportToDownloads(String apkPath) async {
+    try {
+      return await _ch.invokeMethod<String>('exportApk', <String, dynamic>{
+        'path': apkPath,
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 调起系统安装器；返回 (成功?, 走哪条通道, 错误信息)
   Future<({bool ok, String via, String message})> install(String apkPath) async {
     try {

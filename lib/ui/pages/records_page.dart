@@ -9,13 +9,16 @@ import '../../data/models/operation_view.dart';
 import '../../data/services/unit_converter.dart';
 import '../../data/models/piece_record.dart';
 import '../../data/models/record_filter.dart';
+import '../../data/services/salary_summary.dart';
 import '../../data/services/record_codec.dart';
 import '../../data/services/selection_summary.dart';
 import '../../providers/db_providers.dart';
 import '../../providers/records_providers.dart';
+import '../../providers/work_mode_provider.dart';
 import '../../providers/units_providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/profile_switcher.dart';
+import '../widgets/salary_group_card.dart';
 import '../widgets/record_card.dart';
 import '../widgets/stat_bar.dart';
 import 'filter_page.dart';
@@ -33,6 +36,7 @@ class RecordsPage extends ConsumerWidget {
     final filter = ref.watch(filterProvider);
     final selection = ref.watch(selectionProvider);
     final selectionMode = ref.watch(selectionModeProvider);
+    final salaryMode = ref.watch(salaryModeProvider);
     final scheme = Theme.of(context).colorScheme;
     final converter = ref.watch(unitConverterProvider);
 
@@ -82,7 +86,7 @@ class RecordsPage extends ConsumerWidget {
                   .selectAll(result.records.map((e) => e.id)),
             ),
             IconButton(
-              tooltip: '标记为已上报',
+              tooltip: '标记为已结算',
               icon: const Icon(Icons.check_circle_outline),
               onPressed: selection.isEmpty
                   ? null
@@ -95,7 +99,7 @@ class RecordsPage extends ConsumerWidget {
                       ),
             ),
             IconButton(
-              tooltip: '撤销上报',
+              tooltip: '撤销结算',
               icon: const Icon(Icons.undo),
               onPressed: selection.isEmpty
                   ? null
@@ -233,6 +237,42 @@ class RecordsPage extends ConsumerWidget {
                         : '点右下角「录入」，拍照登记第一条计件记录。',
                   );
                 }
+                // 工资模式：同款自动汇总（不显示日期，方便给员工看工资）
+                if (salaryMode) {
+                  final groups = groupSalary(result.records, converter);
+                  var totalCenti = 0;
+                  for (final r in result.records) {
+                    totalCenti += converter.centiBaseOf(r).toInt();
+                  }
+                  return RefreshIndicator(
+                    onRefresh: () => _onRefresh(ref),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 110),
+                      children: <Widget>[
+                        SalaryTotalBar(
+                          groups: groups,
+                          baseUnit: converter.baseUnit,
+                          totalAmountMilli: result.totalAmountMilli,
+                          totalCount: result.count,
+                          totalCenti: totalCenti,
+                        ),
+                        for (final g in groups)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                            child: RepaintBoundary(
+                              child: SalaryGroupCard(
+                                group: g,
+                                baseUnit: converter.baseUnit,
+                                onTap: () => showSalaryGroupDetail(context, g),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }
+
                 return RefreshIndicator(
                   onRefresh: () => _onRefresh(ref),
                   child: ListView.builder(
@@ -369,7 +409,7 @@ class RecordsPage extends ConsumerWidget {
               leading: const Icon(Icons.checklist_rounded),
               title: const Text('多选'),
               subtitle: const Text(
-                '勾选多条后可以汇总数量/金额、批量上报或删除',
+                '勾选多条后可以汇总数量/金额、批量结算或删除',
                 style: TextStyle(fontSize: 11),
               ),
               onTap: () {
@@ -408,11 +448,11 @@ class RecordsPage extends ConsumerWidget {
                     ? Icons.undo
                     : Icons.check_circle_outline,
               ),
-              title: Text(r.isReported ? '撤销上报标记' : '标记为已上报'),
+              title: Text(r.isReported ? '撤销结算标记' : '标记为已结算'),
               subtitle: Text(
                 r.isReported
-                    ? '改回「未上报」，会重新出现在默认列表里'
-                    : '上报后默认列表不再显示这条',
+                    ? '改回「未结算」，会重新出现在默认列表里'
+                    : '结算后默认列表不再显示这条',
                 style: const TextStyle(fontSize: 11),
               ),
               onTap: () async {
@@ -429,7 +469,7 @@ class RecordsPage extends ConsumerWidget {
                 await ref.read(opLogRepoProvider).record(
                       kind: OpKind.update,
                       source: 'manual',
-                      summary: r.isReported ? '标记 1 条为已上报' : '撤销 1 条上报标记',
+                      summary: r.isReported ? '标记 1 条为已结算' : '撤销 1 条结算',
                       before: <PieceRecord>[before],
                     );
               },
@@ -695,7 +735,7 @@ class RecordsPage extends ConsumerWidget {
     );
   }
 
-  /// 批量改上报状态
+  /// 批量改结算状态
   Future<void> _markReported(
     BuildContext context,
     WidgetRef ref,
@@ -725,8 +765,8 @@ class RecordsPage extends ConsumerWidget {
           kind: OpKind.update,
           source: 'manual',
           summary: reported
-              ? '标记 ${targets.length} 条为已上报'
-              : '撤销 ${targets.length} 条的上报标记',
+              ? '标记 ${targets.length} 条为已结算'
+              : '撤销 ${targets.length} 条的结算',
           before: before,
         );
 
@@ -736,8 +776,8 @@ class RecordsPage extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(reported
-              ? '已把 ${targets.length} 条标记为已上报'
-              : '已撤销 ${targets.length} 条的上报标记'),
+              ? '已把 ${targets.length} 条标记为已结算'
+              : '已撤销 ${targets.length} 条的结算'),
         ),
       );
     }

@@ -11,11 +11,13 @@ import '../../data/models/piece_record.dart';
 import '../../data/models/record_filter.dart';
 import '../../data/services/csv_service.dart';
 import '../../data/services/report_service.dart';
+import '../../providers/profile_providers.dart';
 import '../../providers/records_providers.dart';
 import '../../providers/settings_providers.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/profile_switcher.dart';
 import '../widgets/report_document.dart';
+import '../../providers/work_mode_provider.dart';
 
 /// 报表预览 / 导出页。
 ///
@@ -263,6 +265,9 @@ class _ReportPageState extends ConsumerState<ReportPage> {
                           generatedAt: DateTime.now(),
                           rangeText: rangeText,
                           groupBy: _groupField,
+                          profileName:
+                              ref.watch(activeProfileProvider)?.name ?? '',
+                          salaryMode: ref.watch(salaryModeProvider),
                         ),
                       ),
                     ),

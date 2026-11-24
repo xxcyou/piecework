@@ -153,6 +153,64 @@ class MainActivity : FlutterActivity() {
         return true
     }
 
+    /**
+     * 把 APK 复制到「下载」目录，返回 content:// 地址。
+     * 这是最后的通用兜底：任何机型都能在文件管理器里点开安装。
+     */
+    private fun exportApkToDownloads(path: String, result: MethodChannel.Result) {
+        try {
+            val file = java.io.File(path)
+            if (!file.exists()) {
+                result.error("missing", "安装包不存在", null)
+                return
+            }
+            val name = "piecework-${System.currentTimeMillis()}.apk"
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val values = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.Downloads.DISPLAY_NAME, name)
+                    put(
+                        android.provider.MediaStore.Downloads.MIME_TYPE,
+                        "application/vnd.android.package-archive",
+                    )
+                    put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val resolver = contentResolver
+                val uri = resolver.insert(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    values,
+                )
+                if (uri == null) {
+                    result.error("insert_failed", "无法写入下载目录", null)
+                    return
+                }
+                resolver.openOutputStream(uri)?.use { out ->
+                    file.inputStream().use { input -> input.copyTo(out) }
+                }
+                values.clear()
+                values.put(android.provider.MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+                result.success(uri.toString())
+            } else {
+                @Suppress("DEPRECATION")
+                val dir = android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_DOWNLOADS,
+                )
+                if (!dir.exists()) dir.mkdirs()
+                val dest = java.io.File(dir, name)
+                file.copyTo(dest, overwrite = true)
+                android.media.MediaScannerConnection.scanFile(
+                    this,
+                    arrayOf(dest.absolutePath),
+                    arrayOf("application/vnd.android.package-archive"),
+                    null,
+                )
+                result.success("file://${dest.absolutePath}")
+            }
+        } catch (e: Exception) {
+            result.error("export_failed", e.message ?: "导出失败", null)
+        }
+    }
+
     /** 打开「安装未知应用」设置页（Dart 侧按钮用） */
     private fun openInstallSettings(result: MethodChannel.Result) {
         try {
@@ -180,6 +238,10 @@ class MainActivity : FlutterActivity() {
                             installApk(call.argument<String>("path") ?: "", result)
                         }
                         "openInstallSettings" -> openInstallSettings(result)
+                        "exportApk" -> exportApkToDownloads(
+                            call.argument<String>("path") ?: "",
+                            result,
+                        )
                         "deviceId" -> {
                             // 设备码来源：Android ID（卸载重装不变，刷机/换机会变）
                             val id = android.provider.Settings.Secure.getString(

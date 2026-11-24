@@ -276,25 +276,43 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
   var trying = true;
   while (trying) {
     if (!context.mounted) return;
-    final go = await showDialog<bool>(
+    final go = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('已下载 v${r.versionName}'),
-        content: const Text('点「安装」，在系统弹窗里确认即可覆盖安装。',
-            style: TextStyle(fontSize: 12.5)),
+        content: const Text(
+          '点「安装」调起系统安装器。\n没反应就点「存到下载」，去文件管理器里点那个 APK 装。',
+          style: TextStyle(fontSize: 12.5, height: 1.5),
+        ),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () => Navigator.of(ctx).pop('export'),
+            child: const Text('存到下载'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('later'),
             child: const Text('稍后'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () => Navigator.of(ctx).pop('install'),
             child: const Text('安装'),
           ),
         ],
       ),
     );
-    if (go != true) return;
+    if (go == 'export') {
+      final uri = await UpdateInstaller.instance.exportToDownloads(path);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(uri == null
+              ? '存到下载失败'
+              : '已存到「下载」目录，去文件管理器点它安装'),
+        ),
+      );
+      return;
+    }
+    if (go != 'install') return;
 
     final res = await UpdateInstaller.instance.install(path);
     if (res.ok) {
