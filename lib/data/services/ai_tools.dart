@@ -1257,13 +1257,21 @@ class AiToolExecutor {
     required this.records,
     required this.options,
     this.contextPhotoName = '',
+    this.profileId = 0,
+    this.profileName = '',
   });
 
   /// 能真正操作 App 的宿主（改设置 / 加单位 / 配换算 / 删记录）
   final AiToolHost host;
 
-  /// 全量记录快照（每次提问时由 Provider 传入最新数据）
+  /// 当前身份卡的记录快照（**已按身份过滤**，AI 看不到别的身份的账）
   final List<PieceRecord> records;
+
+  /// 当前身份卡 id（新建记录会打到这个身份下）
+  final int profileId;
+
+  /// 当前身份卡名字（回给模型，便于它说「张三这批」）
+  final String profileName;
 
   /// 用户维护的可选列表
   final Map<OptionKind, List<String>> options;
@@ -1744,6 +1752,7 @@ class AiToolExecutor {
         final src = records.where((r) => r.id == id).firstOrNull;
         if (src == null) continue;
         items.add(<String, dynamic>{
+          'profileId': profileId,
           'styleModel': src.styleModel,
           'color': src.color,
           'size': src.size,
@@ -1768,6 +1777,7 @@ class AiToolExecutor {
         // 用户带图说话时，新记录直接关联这张图（默认开启，除非显式 false）
         final wantPhoto = m['attach_photo'] != false && contextPhotoName.isNotEmpty;
         items.add(<String, dynamic>{
+          'profileId': profileId,
           'styleModel': style,
           'color': (m['color'] as String?)?.trim() ?? '',
           'size': (m['size'] as String?)?.trim() ?? '',

@@ -17,133 +17,138 @@ const AppSettingSchema = CollectionSchema(
   name: r'AppSetting',
   id: -948817443998796339,
   properties: {
-    r'aiApiKey': PropertySchema(
+    r'activeProfileId': PropertySchema(
       id: 0,
+      name: r'activeProfileId',
+      type: IsarType.long,
+    ),
+    r'aiApiKey': PropertySchema(
+      id: 1,
       name: r'aiApiKey',
       type: IsarType.string,
     ),
     r'aiBaseUrl': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'aiBaseUrl',
       type: IsarType.string,
     ),
     r'aiBuiltinModelId': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'aiBuiltinModelId',
       type: IsarType.string,
     ),
     r'aiModel': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'aiModel',
       type: IsarType.string,
     ),
     r'aiModelCacheAt': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'aiModelCacheAt',
       type: IsarType.dateTime,
     ),
     r'aiModelCacheJson': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'aiModelCacheJson',
       type: IsarType.string,
     ),
     r'aiProviderId': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'aiProviderId',
       type: IsarType.string,
     ),
     r'aiSystemPrompt': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'aiSystemPrompt',
       type: IsarType.string,
     ),
     r'aiThinkingLevel': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'aiThinkingLevel',
       type: IsarType.long,
     ),
     r'aiVisionEnabled': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'aiVisionEnabled',
       type: IsarType.bool,
     ),
     r'chatSessionId': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'chatSessionId',
       type: IsarType.long,
     ),
     r'contextWindowTokens': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'contextWindowTokens',
       type: IsarType.long,
     ),
     r'defaultUnitPrice': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'defaultUnitPrice',
       type: IsarType.double,
     ),
     r'lastBackupMs': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'lastBackupMs',
       type: IsarType.long,
     ),
     r'reportFontScale': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'reportFontScale',
       type: IsarType.double,
     ),
     r'reportGroupBy': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'reportGroupBy',
       type: IsarType.long,
     ),
     r'reportShowPhoto': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'reportShowPhoto',
       type: IsarType.bool,
     ),
     r'reportSubtitle': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'reportSubtitle',
       type: IsarType.string,
     ),
     r'reportTemplate': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'reportTemplate',
       type: IsarType.long,
     ),
     r'reportTitle': PropertySchema(
-      id: 19,
+      id: 20,
       name: r'reportTitle',
       type: IsarType.string,
     ),
     r'themeModeIndex': PropertySchema(
-      id: 20,
+      id: 21,
       name: r'themeModeIndex',
       type: IsarType.long,
     ),
     r'webdavDir': PropertySchema(
-      id: 21,
+      id: 22,
       name: r'webdavDir',
       type: IsarType.string,
     ),
     r'webdavEnabled': PropertySchema(
-      id: 22,
+      id: 23,
       name: r'webdavEnabled',
       type: IsarType.bool,
     ),
     r'webdavPass': PropertySchema(
-      id: 23,
+      id: 24,
       name: r'webdavPass',
       type: IsarType.string,
     ),
     r'webdavUrl': PropertySchema(
-      id: 24,
+      id: 25,
       name: r'webdavUrl',
       type: IsarType.string,
     ),
     r'webdavUser': PropertySchema(
-      id: 25,
+      id: 26,
       name: r'webdavUser',
       type: IsarType.string,
     )
@@ -190,32 +195,33 @@ void _appSettingSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.aiApiKey);
-  writer.writeString(offsets[1], object.aiBaseUrl);
-  writer.writeString(offsets[2], object.aiBuiltinModelId);
-  writer.writeString(offsets[3], object.aiModel);
-  writer.writeDateTime(offsets[4], object.aiModelCacheAt);
-  writer.writeString(offsets[5], object.aiModelCacheJson);
-  writer.writeString(offsets[6], object.aiProviderId);
-  writer.writeString(offsets[7], object.aiSystemPrompt);
-  writer.writeLong(offsets[8], object.aiThinkingLevel);
-  writer.writeBool(offsets[9], object.aiVisionEnabled);
-  writer.writeLong(offsets[10], object.chatSessionId);
-  writer.writeLong(offsets[11], object.contextWindowTokens);
-  writer.writeDouble(offsets[12], object.defaultUnitPrice);
-  writer.writeLong(offsets[13], object.lastBackupMs);
-  writer.writeDouble(offsets[14], object.reportFontScale);
-  writer.writeLong(offsets[15], object.reportGroupBy);
-  writer.writeBool(offsets[16], object.reportShowPhoto);
-  writer.writeString(offsets[17], object.reportSubtitle);
-  writer.writeLong(offsets[18], object.reportTemplate);
-  writer.writeString(offsets[19], object.reportTitle);
-  writer.writeLong(offsets[20], object.themeModeIndex);
-  writer.writeString(offsets[21], object.webdavDir);
-  writer.writeBool(offsets[22], object.webdavEnabled);
-  writer.writeString(offsets[23], object.webdavPass);
-  writer.writeString(offsets[24], object.webdavUrl);
-  writer.writeString(offsets[25], object.webdavUser);
+  writer.writeLong(offsets[0], object.activeProfileId);
+  writer.writeString(offsets[1], object.aiApiKey);
+  writer.writeString(offsets[2], object.aiBaseUrl);
+  writer.writeString(offsets[3], object.aiBuiltinModelId);
+  writer.writeString(offsets[4], object.aiModel);
+  writer.writeDateTime(offsets[5], object.aiModelCacheAt);
+  writer.writeString(offsets[6], object.aiModelCacheJson);
+  writer.writeString(offsets[7], object.aiProviderId);
+  writer.writeString(offsets[8], object.aiSystemPrompt);
+  writer.writeLong(offsets[9], object.aiThinkingLevel);
+  writer.writeBool(offsets[10], object.aiVisionEnabled);
+  writer.writeLong(offsets[11], object.chatSessionId);
+  writer.writeLong(offsets[12], object.contextWindowTokens);
+  writer.writeDouble(offsets[13], object.defaultUnitPrice);
+  writer.writeLong(offsets[14], object.lastBackupMs);
+  writer.writeDouble(offsets[15], object.reportFontScale);
+  writer.writeLong(offsets[16], object.reportGroupBy);
+  writer.writeBool(offsets[17], object.reportShowPhoto);
+  writer.writeString(offsets[18], object.reportSubtitle);
+  writer.writeLong(offsets[19], object.reportTemplate);
+  writer.writeString(offsets[20], object.reportTitle);
+  writer.writeLong(offsets[21], object.themeModeIndex);
+  writer.writeString(offsets[22], object.webdavDir);
+  writer.writeBool(offsets[23], object.webdavEnabled);
+  writer.writeString(offsets[24], object.webdavPass);
+  writer.writeString(offsets[25], object.webdavUrl);
+  writer.writeString(offsets[26], object.webdavUser);
 }
 
 AppSetting _appSettingDeserialize(
@@ -225,33 +231,34 @@ AppSetting _appSettingDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = AppSetting();
-  object.aiApiKey = reader.readString(offsets[0]);
-  object.aiBaseUrl = reader.readString(offsets[1]);
-  object.aiBuiltinModelId = reader.readString(offsets[2]);
-  object.aiModel = reader.readString(offsets[3]);
-  object.aiModelCacheAt = reader.readDateTimeOrNull(offsets[4]);
-  object.aiModelCacheJson = reader.readString(offsets[5]);
-  object.aiProviderId = reader.readString(offsets[6]);
-  object.aiSystemPrompt = reader.readString(offsets[7]);
-  object.aiThinkingLevel = reader.readLong(offsets[8]);
-  object.aiVisionEnabled = reader.readBool(offsets[9]);
-  object.chatSessionId = reader.readLong(offsets[10]);
-  object.contextWindowTokens = reader.readLong(offsets[11]);
-  object.defaultUnitPrice = reader.readDouble(offsets[12]);
+  object.activeProfileId = reader.readLong(offsets[0]);
+  object.aiApiKey = reader.readString(offsets[1]);
+  object.aiBaseUrl = reader.readString(offsets[2]);
+  object.aiBuiltinModelId = reader.readString(offsets[3]);
+  object.aiModel = reader.readString(offsets[4]);
+  object.aiModelCacheAt = reader.readDateTimeOrNull(offsets[5]);
+  object.aiModelCacheJson = reader.readString(offsets[6]);
+  object.aiProviderId = reader.readString(offsets[7]);
+  object.aiSystemPrompt = reader.readString(offsets[8]);
+  object.aiThinkingLevel = reader.readLong(offsets[9]);
+  object.aiVisionEnabled = reader.readBool(offsets[10]);
+  object.chatSessionId = reader.readLong(offsets[11]);
+  object.contextWindowTokens = reader.readLong(offsets[12]);
+  object.defaultUnitPrice = reader.readDouble(offsets[13]);
   object.id = id;
-  object.lastBackupMs = reader.readLong(offsets[13]);
-  object.reportFontScale = reader.readDouble(offsets[14]);
-  object.reportGroupBy = reader.readLong(offsets[15]);
-  object.reportShowPhoto = reader.readBool(offsets[16]);
-  object.reportSubtitle = reader.readString(offsets[17]);
-  object.reportTemplate = reader.readLong(offsets[18]);
-  object.reportTitle = reader.readString(offsets[19]);
-  object.themeModeIndex = reader.readLong(offsets[20]);
-  object.webdavDir = reader.readString(offsets[21]);
-  object.webdavEnabled = reader.readBool(offsets[22]);
-  object.webdavPass = reader.readString(offsets[23]);
-  object.webdavUrl = reader.readString(offsets[24]);
-  object.webdavUser = reader.readString(offsets[25]);
+  object.lastBackupMs = reader.readLong(offsets[14]);
+  object.reportFontScale = reader.readDouble(offsets[15]);
+  object.reportGroupBy = reader.readLong(offsets[16]);
+  object.reportShowPhoto = reader.readBool(offsets[17]);
+  object.reportSubtitle = reader.readString(offsets[18]);
+  object.reportTemplate = reader.readLong(offsets[19]);
+  object.reportTitle = reader.readString(offsets[20]);
+  object.themeModeIndex = reader.readLong(offsets[21]);
+  object.webdavDir = reader.readString(offsets[22]);
+  object.webdavEnabled = reader.readBool(offsets[23]);
+  object.webdavPass = reader.readString(offsets[24]);
+  object.webdavUrl = reader.readString(offsets[25]);
+  object.webdavUser = reader.readString(offsets[26]);
   return object;
 }
 
@@ -263,7 +270,7 @@ P _appSettingDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
@@ -271,48 +278,50 @@ P _appSettingDeserializeProp<P>(
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 5:
       return (reader.readString(offset)) as P;
+    case 5:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
       return (reader.readString(offset)) as P;
     case 8:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 9:
-      return (reader.readBool(offset)) as P;
-    case 10:
       return (reader.readLong(offset)) as P;
+    case 10:
+      return (reader.readBool(offset)) as P;
     case 11:
       return (reader.readLong(offset)) as P;
     case 12:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 13:
-      return (reader.readLong(offset)) as P;
-    case 14:
       return (reader.readDouble(offset)) as P;
+    case 14:
+      return (reader.readLong(offset)) as P;
     case 15:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 16:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 17:
-      return (reader.readString(offset)) as P;
-    case 18:
-      return (reader.readLong(offset)) as P;
-    case 19:
-      return (reader.readString(offset)) as P;
-    case 20:
-      return (reader.readLong(offset)) as P;
-    case 21:
-      return (reader.readString(offset)) as P;
-    case 22:
       return (reader.readBool(offset)) as P;
-    case 23:
+    case 18:
       return (reader.readString(offset)) as P;
+    case 19:
+      return (reader.readLong(offset)) as P;
+    case 20:
+      return (reader.readString(offset)) as P;
+    case 21:
+      return (reader.readLong(offset)) as P;
+    case 22:
+      return (reader.readString(offset)) as P;
+    case 23:
+      return (reader.readBool(offset)) as P;
     case 24:
       return (reader.readString(offset)) as P;
     case 25:
+      return (reader.readString(offset)) as P;
+    case 26:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -410,6 +419,62 @@ extension AppSettingQueryWhere
 
 extension AppSettingQueryFilter
     on QueryBuilder<AppSetting, AppSetting, QFilterCondition> {
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      activeProfileIdEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'activeProfileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      activeProfileIdGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'activeProfileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      activeProfileIdLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'activeProfileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition>
+      activeProfileIdBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'activeProfileId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<AppSetting, AppSetting, QAfterFilterCondition> aiApiKeyEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -2854,6 +2919,19 @@ extension AppSettingQueryLinks
 
 extension AppSettingQuerySortBy
     on QueryBuilder<AppSetting, AppSetting, QSortBy> {
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> sortByActiveProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activeProfileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy>
+      sortByActiveProfileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activeProfileId', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSetting, AppSetting, QAfterSortBy> sortByAiApiKey() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'aiApiKey', Sort.asc);
@@ -3183,6 +3261,19 @@ extension AppSettingQuerySortBy
 
 extension AppSettingQuerySortThenBy
     on QueryBuilder<AppSetting, AppSetting, QSortThenBy> {
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy> thenByActiveProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activeProfileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSetting, AppSetting, QAfterSortBy>
+      thenByActiveProfileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activeProfileId', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSetting, AppSetting, QAfterSortBy> thenByAiApiKey() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'aiApiKey', Sort.asc);
@@ -3524,6 +3615,12 @@ extension AppSettingQuerySortThenBy
 
 extension AppSettingQueryWhereDistinct
     on QueryBuilder<AppSetting, AppSetting, QDistinct> {
+  QueryBuilder<AppSetting, AppSetting, QDistinct> distinctByActiveProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'activeProfileId');
+    });
+  }
+
   QueryBuilder<AppSetting, AppSetting, QDistinct> distinctByAiApiKey(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -3704,6 +3801,12 @@ extension AppSettingQueryProperty
   QueryBuilder<AppSetting, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<AppSetting, int, QQueryOperations> activeProfileIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'activeProfileId');
     });
   }
 

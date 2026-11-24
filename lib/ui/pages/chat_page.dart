@@ -16,6 +16,7 @@ import '../../providers/settings_providers.dart';
 import '../../providers/ui_providers.dart';
 import '../tour_keys.dart';
 import '../widgets/ai_message_bubble.dart';
+import '../widgets/profile_switcher.dart';
 import '../widgets/thinking_header.dart';
 import '../widgets/tool_calls_sheet.dart';
 import '../widgets/tool_count_chip.dart';
@@ -462,6 +463,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
         ),
         actions: <Widget>[
+          const Center(child: ProfileChip()),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, size: 20),
             tooltip: '更多',

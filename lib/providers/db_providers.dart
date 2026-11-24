@@ -5,6 +5,7 @@ import '../data/repositories/chat_repository.dart';
 import '../data/repositories/operation_log_repository.dart';
 import '../data/repositories/option_repository.dart';
 import '../data/repositories/preset_repository.dart';
+import '../data/repositories/profile_repository.dart';
 import '../data/repositories/record_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/unit_repository.dart';
@@ -15,6 +16,10 @@ import '../data/services/photo_gc.dart';
 /// 由 `main()` 在启动时 override，注入已经打开的 Isar 实例。
 final isarProvider = Provider<Isar>(
   (ref) => throw UnimplementedError('isarProvider 必须在 main() 中 override'),
+);
+
+final profileRepoProvider = Provider<ProfileRepository>(
+  (ref) => ProfileRepository(ref.watch(isarProvider)),
 );
 
 final recordRepoProvider = Provider<RecordRepository>(

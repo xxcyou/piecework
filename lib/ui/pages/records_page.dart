@@ -15,6 +15,7 @@ import '../../providers/db_providers.dart';
 import '../../providers/records_providers.dart';
 import '../../providers/units_providers.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/profile_switcher.dart';
 import '../widgets/record_card.dart';
 import '../widgets/stat_bar.dart';
 import 'filter_page.dart';
@@ -51,7 +52,16 @@ class RecordsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(selectionMode ? '已选 ${selection.length} 项' : '计件记录'),
+        title: selectionMode
+            ? Text('已选 ${selection.length} 项')
+            : const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text('计件记录'),
+                  SizedBox(width: 8),
+                  ProfileChip(),
+                ],
+              ),
         leading: selectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),

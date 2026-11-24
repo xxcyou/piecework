@@ -33,21 +33,31 @@ class ChatRepository {
 
   // ───────────────────────── 会话管理 ─────────────────────────
 
-  Future<List<ChatSession>> sessions() =>
-      _isar.chatSessions.where().sortByUpdatedAtDesc().findAll();
+  /// 会话列表；[profileId] 非空时只列该身份的会话
+  Future<List<ChatSession>> sessions({int? profileId}) {
+    if (profileId == null) {
+      return _isar.chatSessions.where().sortByUpdatedAtDesc().findAll();
+    }
+    return _isar.chatSessions
+        .filter()
+        .profileIdEqualTo(profileId)
+        .sortByUpdatedAtDesc()
+        .findAll();
+  }
 
   Future<ChatSession?> sessionById(Id id) => _isar.chatSessions.get(id);
 
-  /// 最近一个会话；没有就建一个
-  Future<ChatSession> latestOrCreate() async {
-    final list = await sessions();
+  /// 最近一个会话；没有就建一个（按身份隔离）
+  Future<ChatSession> latestOrCreate({int? profileId}) async {
+    final list = await sessions(profileId: profileId);
     if (list.isNotEmpty) return list.first;
-    return createSession('新对话');
+    return createSession('新对话', profileId: profileId);
   }
 
-  Future<ChatSession> createSession(String title) async {
+  Future<ChatSession> createSession(String title, {int? profileId}) async {
     final now = DateTime.now();
     final s = ChatSession();
+    s.profileId = profileId ?? 0;
     s.title = title.trim().isEmpty ? '新对话' : title.trim();
     s.createdAt = now;
     s.updatedAt = now;

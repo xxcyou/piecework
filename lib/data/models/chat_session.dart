@@ -11,6 +11,10 @@ part 'chat_session.g.dart';
 class ChatSession {
   Id id = Isar.autoIncrement;
 
+  /// 归属身份卡
+  @Index()
+  int profileId = 0;
+
   /// 标题：默认取首条用户消息前 20 字，可重命名
   @Index()
   late String title;

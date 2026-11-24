@@ -9,31 +9,50 @@ class RecordRepository {
   final Isar _isar;
 
   /// 全量读取（按录入时间倒序，**不含回收站**）。
-  Future<List<PieceRecord>> all() => _isar.pieceRecords
-      .filter()
-      .deletedAtIsNull()
-      .sortByCreatedAtDesc()
-      .findAll();
+  ///
+  /// [profileId] 非空时只取该身份卡的记录 —— 多身份必须隔离，
+  /// 否则张三的件数会混进李四的账里。
+  Future<List<PieceRecord>> all({int? profileId}) {
+    final q = profileId == null
+        ? _isar.pieceRecords.filter().deletedAtIsNull()
+        : _isar.pieceRecords
+            .filter()
+            .profileIdEqualTo(profileId)
+            .deletedAtIsNull();
+    return q.sortByCreatedAtDesc().findAll();
+  }
 
   /// 响应式监听：录入/编辑/删除后列表会自动刷新（不含回收站）
-  Stream<List<PieceRecord>> watchAll() => _isar.pieceRecords
-      .filter()
-      .deletedAtIsNull()
-      .sortByCreatedAtDesc()
-      .watch(fireImmediately: true);
+  Stream<List<PieceRecord>> watchAll({int? profileId}) {
+    final q = profileId == null
+        ? _isar.pieceRecords.filter().deletedAtIsNull()
+        : _isar.pieceRecords
+            .filter()
+            .profileIdEqualTo(profileId)
+            .deletedAtIsNull();
+    return q.sortByCreatedAtDesc().watch(fireImmediately: true);
+  }
 
   /// 回收站：已软删除的记录，最近删的在前
-  Future<List<PieceRecord>> deleted() => _isar.pieceRecords
-      .filter()
-      .deletedAtIsNotNull()
-      .sortByDeletedAtDesc()
-      .findAll();
+  Future<List<PieceRecord>> deleted({int? profileId}) {
+    final q = profileId == null
+        ? _isar.pieceRecords.filter().deletedAtIsNotNull()
+        : _isar.pieceRecords
+            .filter()
+            .profileIdEqualTo(profileId)
+            .deletedAtIsNotNull();
+    return q.sortByDeletedAtDesc().findAll();
+  }
 
-  Stream<List<PieceRecord>> watchDeleted() => _isar.pieceRecords
-      .filter()
-      .deletedAtIsNotNull()
-      .sortByDeletedAtDesc()
-      .watch(fireImmediately: true);
+  Stream<List<PieceRecord>> watchDeleted({int? profileId}) {
+    final q = profileId == null
+        ? _isar.pieceRecords.filter().deletedAtIsNotNull()
+        : _isar.pieceRecords
+            .filter()
+            .profileIdEqualTo(profileId)
+            .deletedAtIsNotNull();
+    return q.sortByDeletedAtDesc().watch(fireImmediately: true);
+  }
 
   Future<PieceRecord?> byId(Id id) => _isar.pieceRecords.get(id);
 

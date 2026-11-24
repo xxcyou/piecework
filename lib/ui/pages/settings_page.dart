@@ -20,6 +20,7 @@ import '../../providers/settings_providers.dart';
 import '../../providers/ui_providers.dart';
 import 'ai_settings_page.dart';
 import 'gallery_page.dart';
+import 'profiles_page.dart';
 import 'webdav_page.dart';
 import '../widgets/tutorials.dart';
 import 'tutorials_page.dart';
@@ -331,6 +332,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 title: '从备份恢复',
                 subtitle: '选择之前导出的 .zip 文件',
                 onTap: _restore,
+              ),
+              _tile(
+                scheme,
+                icon: Icons.badge_outlined,
+                title: '身份卡（多人管理）',
+                subtitle: '每个人一张卡，记录/报表/AI 全部隔离',
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(builder: (_) => const ProfilesPage()),
+                ),
               ),
               _tile(
                 scheme,

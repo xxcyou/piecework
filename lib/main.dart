@@ -11,10 +11,12 @@ import 'data/models/filter_preset.dart';
 import 'data/models/operation_log.dart';
 import 'data/models/option_item.dart';
 import 'data/models/piece_record.dart';
+import 'data/models/profile.dart';
 import 'data/models/unit_item.dart';
 import 'data/models/unit_rule.dart';
 import 'data/repositories/operation_log_repository.dart';
 import 'data/repositories/option_repository.dart';
+import 'data/repositories/profile_repository.dart';
 import 'data/repositories/record_repository.dart';
 import 'data/repositories/settings_repository.dart';
 import 'data/repositories/unit_repository.dart';
@@ -45,6 +47,7 @@ Future<void> main() async {
       UnitItemSchema,
       UnitRuleSchema,
       OperationLogSchema,
+      ProfileSchema,
     ],
     directory: docs.path,
     name: 'piecework',
@@ -72,11 +75,22 @@ Future<void> main() async {
     // 清理失败不影响启动
   }
 
+  // 身份卡：确保有默认身份，并把历史上没有归属的记录/对话挂过去（只补字段，不删数据）
+  final profileRepo = ProfileRepository(isar);
+  final defaultProfile = await profileRepo.ensureDefault();
+
   // 幂等：已有数据时直接跳过
   await OptionRepository(isar).seedDefaults();
   await UnitRepository(isar).seedDefaults();
   final settingsRepo = SettingsRepository(isar);
   final setting = await settingsRepo.ensureRow();
+
+  // 当前身份：没设过 / 指向已删除的身份 → 回到默认身份
+  if (setting.activeProfileId == 0 ||
+      await profileRepo.byId(setting.activeProfileId) == null) {
+    setting.activeProfileId = defaultProfile.id;
+    await settingsRepo.save(setting);
+  }
 
   // 注意：**不要**再把「选了自定义但没填完」自动改回内置。
   // 那是用户明确做出的选择，偷偷改掉会让人以为「切不回第三方提供商」。

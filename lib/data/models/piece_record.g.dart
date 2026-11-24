@@ -42,44 +42,49 @@ const PieceRecordSchema = CollectionSchema(
       name: r'photoName',
       type: IsarType.string,
     ),
-    r'quantity': PropertySchema(
+    r'profileId': PropertySchema(
       id: 5,
+      name: r'profileId',
+      type: IsarType.long,
+    ),
+    r'quantity': PropertySchema(
+      id: 6,
       name: r'quantity',
       type: IsarType.long,
     ),
     r'reportedAt': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'reportedAt',
       type: IsarType.dateTime,
     ),
     r'size': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'size',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'status',
       type: IsarType.byte,
       enumMap: _PieceRecordstatusEnumValueMap,
     ),
     r'styleModel': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'styleModel',
       type: IsarType.string,
     ),
     r'unit': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'unit',
       type: IsarType.string,
     ),
     r'unitPrice': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'unitPrice',
       type: IsarType.double,
     ),
     r'updatedAt': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -90,6 +95,19 @@ const PieceRecordSchema = CollectionSchema(
   deserializeProp: _pieceRecordDeserializeProp,
   idName: r'id',
   indexes: {
+    r'profileId': IndexSchema(
+      id: 6052971939042612300,
+      name: r'profileId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'profileId',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
+    ),
     r'styleModel': IndexSchema(
       id: 7155934246782563793,
       name: r'styleModel',
@@ -203,14 +221,15 @@ void _pieceRecordSerialize(
   writer.writeDateTime(offsets[2], object.deletedAt);
   writer.writeString(offsets[3], object.note);
   writer.writeString(offsets[4], object.photoName);
-  writer.writeLong(offsets[5], object.quantity);
-  writer.writeDateTime(offsets[6], object.reportedAt);
-  writer.writeString(offsets[7], object.size);
-  writer.writeByte(offsets[8], object.status.index);
-  writer.writeString(offsets[9], object.styleModel);
-  writer.writeString(offsets[10], object.unit);
-  writer.writeDouble(offsets[11], object.unitPrice);
-  writer.writeDateTime(offsets[12], object.updatedAt);
+  writer.writeLong(offsets[5], object.profileId);
+  writer.writeLong(offsets[6], object.quantity);
+  writer.writeDateTime(offsets[7], object.reportedAt);
+  writer.writeString(offsets[8], object.size);
+  writer.writeByte(offsets[9], object.status.index);
+  writer.writeString(offsets[10], object.styleModel);
+  writer.writeString(offsets[11], object.unit);
+  writer.writeDouble(offsets[12], object.unitPrice);
+  writer.writeDateTime(offsets[13], object.updatedAt);
 }
 
 PieceRecord _pieceRecordDeserialize(
@@ -226,16 +245,17 @@ PieceRecord _pieceRecordDeserialize(
   object.id = id;
   object.note = reader.readString(offsets[3]);
   object.photoName = reader.readString(offsets[4]);
-  object.quantity = reader.readLong(offsets[5]);
-  object.reportedAt = reader.readDateTimeOrNull(offsets[6]);
-  object.size = reader.readString(offsets[7]);
+  object.profileId = reader.readLong(offsets[5]);
+  object.quantity = reader.readLong(offsets[6]);
+  object.reportedAt = reader.readDateTimeOrNull(offsets[7]);
+  object.size = reader.readString(offsets[8]);
   object.status =
-      _PieceRecordstatusValueEnumMap[reader.readByteOrNull(offsets[8])] ??
+      _PieceRecordstatusValueEnumMap[reader.readByteOrNull(offsets[9])] ??
           RecordStatus.pending;
-  object.styleModel = reader.readString(offsets[9]);
-  object.unit = reader.readString(offsets[10]);
-  object.unitPrice = reader.readDouble(offsets[11]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[12]);
+  object.styleModel = reader.readString(offsets[10]);
+  object.unit = reader.readString(offsets[11]);
+  object.unitPrice = reader.readDouble(offsets[12]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[13]);
   return object;
 }
 
@@ -259,19 +279,21 @@ P _pieceRecordDeserializeProp<P>(
     case 5:
       return (reader.readLong(offset)) as P;
     case 6:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 8:
+      return (reader.readString(offset)) as P;
+    case 9:
       return (_PieceRecordstatusValueEnumMap[reader.readByteOrNull(offset)] ??
           RecordStatus.pending) as P;
-    case 9:
-      return (reader.readString(offset)) as P;
     case 10:
       return (reader.readString(offset)) as P;
     case 11:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 12:
+      return (reader.readDouble(offset)) as P;
+    case 13:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -305,6 +327,14 @@ extension PieceRecordQueryWhereSort
   QueryBuilder<PieceRecord, PieceRecord, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterWhere> anyProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'profileId'),
+      );
     });
   }
 
@@ -396,6 +426,97 @@ extension PieceRecordQueryWhere
         lower: lowerId,
         includeLower: includeLower,
         upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterWhereClause> profileIdEqualTo(
+      int profileId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'profileId',
+        value: [profileId],
+      ));
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterWhereClause> profileIdNotEqualTo(
+      int profileId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [],
+              upper: [profileId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [profileId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [profileId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [],
+              upper: [profileId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterWhereClause>
+      profileIdGreaterThan(
+    int profileId, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'profileId',
+        lower: [profileId],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterWhereClause> profileIdLessThan(
+    int profileId, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'profileId',
+        lower: [],
+        upper: [profileId],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterWhereClause> profileIdBetween(
+    int lowerProfileId,
+    int upperProfileId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'profileId',
+        lower: [lowerProfileId],
+        includeLower: includeLower,
+        upper: [upperProfileId],
         includeUpper: includeUpper,
       ));
     });
@@ -1414,6 +1535,62 @@ extension PieceRecordQueryFilter
     });
   }
 
+  QueryBuilder<PieceRecord, PieceRecord, QAfterFilterCondition>
+      profileIdEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'profileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterFilterCondition>
+      profileIdGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'profileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterFilterCondition>
+      profileIdLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'profileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterFilterCondition>
+      profileIdBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'profileId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<PieceRecord, PieceRecord, QAfterFilterCondition> quantityEqualTo(
       int value) {
     return QueryBuilder.apply(this, (query) {
@@ -2204,6 +2381,18 @@ extension PieceRecordQuerySortBy
     });
   }
 
+  QueryBuilder<PieceRecord, PieceRecord, QAfterSortBy> sortByProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterSortBy> sortByProfileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.desc);
+    });
+  }
+
   QueryBuilder<PieceRecord, PieceRecord, QAfterSortBy> sortByQuantity() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'quantity', Sort.asc);
@@ -2375,6 +2564,18 @@ extension PieceRecordQuerySortThenBy
     });
   }
 
+  QueryBuilder<PieceRecord, PieceRecord, QAfterSortBy> thenByProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PieceRecord, PieceRecord, QAfterSortBy> thenByProfileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.desc);
+    });
+  }
+
   QueryBuilder<PieceRecord, PieceRecord, QAfterSortBy> thenByQuantity() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'quantity', Sort.asc);
@@ -2507,6 +2708,12 @@ extension PieceRecordQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PieceRecord, PieceRecord, QDistinct> distinctByProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'profileId');
+    });
+  }
+
   QueryBuilder<PieceRecord, PieceRecord, QDistinct> distinctByQuantity() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'quantity');
@@ -2594,6 +2801,12 @@ extension PieceRecordQueryProperty
   QueryBuilder<PieceRecord, String, QQueryOperations> photoNameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'photoName');
+    });
+  }
+
+  QueryBuilder<PieceRecord, int, QQueryOperations> profileIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'profileId');
     });
   }
 

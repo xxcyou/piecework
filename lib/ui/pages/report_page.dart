@@ -14,6 +14,7 @@ import '../../data/services/report_service.dart';
 import '../../providers/records_providers.dart';
 import '../../providers/settings_providers.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/profile_switcher.dart';
 import '../widgets/report_document.dart';
 
 /// 报表预览 / 导出页。
@@ -165,7 +166,14 @@ class _ReportPageState extends ConsumerState<ReportPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('报表'),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text('报表'),
+            SizedBox(width: 8),
+            ProfileChip(),
+          ],
+        ),
         actions: <Widget>[
           PopupMenuButton<String>(
             icon: const Icon(Icons.ios_share_outlined),

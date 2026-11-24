@@ -10,6 +10,7 @@ import '../models/chat_message.dart';
 import '../models/filter_preset.dart';
 import '../models/option_item.dart';
 import '../models/piece_record.dart';
+import '../models/profile.dart';
 import '../models/unit_item.dart';
 import '../models/unit_rule.dart';
 import 'photo_service.dart';
@@ -57,6 +58,7 @@ class BackupService {
   // ───────────────────────────── 备份 ─────────────────────────────
 
   Future<Uint8List> createBackup() async {
+    final profiles = await _isar.profiles.where().findAll();
     final records = await _isar.pieceRecords.where().findAll();
     final options = await _isar.optionItems.where().findAll();
     final presets = await _isar.filterPresets.where().findAll();
@@ -72,6 +74,17 @@ class BackupService {
       'records': records.map(_recordToJson).toList(),
       'options': options.map(_optionToJson).toList(),
       'presets': presets.map(_presetToJson).toList(),
+      'profiles': profiles
+          .map((p) => <String, dynamic>{
+                'id': p.id,
+                'name': p.name,
+                'colorName': p.colorName,
+                'note': p.note,
+                'createdAt': p.createdAt.toIso8601String(),
+                'archived': p.archived,
+                'isDefault': p.isDefault,
+              })
+          .toList(),
       'chatMessages': chats.map(_chatToJson).toList(),
       'settings': setting == null ? null : _settingToJson(setting),
       'unitItems': unitItems.map(_unitItemToJson).toList(),
@@ -188,6 +201,7 @@ class BackupService {
     }
 
     await _isar.writeTxn(() async {
+      await _isar.profiles.clear();
       await _isar.pieceRecords.clear();
       await _isar.optionItems.clear();
       await _isar.filterPresets.clear();
@@ -196,6 +210,22 @@ class BackupService {
 
       await _isar.unitItems.clear();
       await _isar.unitRules.clear();
+      final profileRows = _asList(map['profiles']).map((e) {
+        final m = e as Map;
+        final p = Profile()
+          ..name = (m['name'] as String?) ?? '我'
+          ..colorName = (m['colorName'] as String?) ?? ''
+          ..note = (m['note'] as String?) ?? ''
+          ..createdAt =
+              DateTime.tryParse((m['createdAt'] as String?) ?? '') ??
+                  DateTime.now()
+          ..archived = m['archived'] == true
+          ..isDefault = m['isDefault'] == true;
+        final id = m['id'];
+        if (id is num) p.id = id.toInt();
+        return p;
+      }).toList();
+      if (profileRows.isNotEmpty) await _isar.profiles.putAll(profileRows);
       await _isar.pieceRecords.putAll(records);
       await _isar.unitItems.putAll(unitItems);
       await _isar.unitRules.putAll(unitRules);

@@ -32,6 +32,10 @@ RecordStatus recordStatusFromWire(Object? v) =>
 class PieceRecord {
   Id id = Isar.autoIncrement;
 
+  /// 归属身份卡（0 = 默认身份；见 [Profile]）
+  @Index()
+  int profileId = 0;
+
   /// 款式型号，例如 "A1023"、"XX"
   @Index()
   late String styleModel;

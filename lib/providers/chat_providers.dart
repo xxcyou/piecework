@@ -24,6 +24,7 @@ import '../core/money.dart';
 import '../data/services/record_codec.dart';
 import '../data/services/unit_converter.dart';
 import 'db_providers.dart';
+import 'profile_providers.dart';
 import 'terminal_providers.dart';
 import 'options_providers.dart';
 import 'records_providers.dart';
@@ -105,6 +106,17 @@ class ChatNotifier extends AsyncNotifier<List<ChatMessage>> {
   /// 当前会话 id（切换会话时更新）
   int _sessionId = 1;
 
+  /// 当前身份卡 id（所有会话/消息都按它隔离）
+  int get profileId => ref.read(activeProfileIdProvider);
+
+  /// 在数据概览前面标上当前身份，避免模型把不同身份的账混着说
+  String _digestWithProfile(String digest) {
+    final p = ref.read(activeProfileProvider);
+    final name = (p?.name ?? '').trim();
+    if (name.isEmpty) return digest;
+    return '【当前身份卡】$name\n$digest';
+  }
+
   /// 数据概览：让模型开口就知道「今天/本周/本月多少」，
   /// 不用先调一遍工具 —— 这是「变聪明」最直接的一招。
   static String _buildDigest(
@@ -176,13 +188,29 @@ ${line('本月', month)}
     final settings = await ref.watch(settingsProvider.future);
     final repo = ref.watch(chatRepoProvider);
 
-    final existing = await repo.sessionById(settings.chatSessionId);
-    final s = existing ?? await repo.latestOrCreate();
+    final pid = profileId;
+    var existing = await repo.sessionById(settings.chatSessionId);
+    // 会话必须属于当前身份，否则换身份后不该看到别人的对话
+    if (existing != null && pid != 0 && existing.profileId != pid) {
+      existing = null;
+    }
+    final s = existing ?? await repo.latestOrCreate(profileId: pid);
     _sessionId = s.id;
     return repo.session(s.id);
   }
 
   // ───────────────────────── 会话管理 ─────────────────────────
+
+  /// 切换身份卡：换到那个身份的会话（上下文不串）
+  Future<void> switchProfileTo(int pid) async {
+    await switchProfile(ref, pid);
+    final repo = ref.read(chatRepoProvider);
+    final s = await repo.latestOrCreate(profileId: pid);
+    _sessionId = s.id;
+    await ref.read(settingsProvider.notifier).mutate((x) => x.chatSessionId = s.id);
+    state = AsyncData(await repo.session(s.id));
+    ref.invalidate(sessionsProvider);
+  }
 
   Future<void> switchTo(int id) async {
     final repo = ref.read(chatRepoProvider);
@@ -194,7 +222,7 @@ ${line('本月', month)}
 
   Future<void> newSession() async {
     final repo = ref.read(chatRepoProvider);
-    final s = await repo.createSession('新对话');
+    final s = await repo.createSession('新对话', profileId: profileId);
     await switchTo(s.id);
   }
 
@@ -242,7 +270,7 @@ ${line('本月', month)}
     final history = List<ChatMessage>.from(state.valueOrNull ?? const []);
 
     // 1. 先把用户消息落库并上屏
-    final userMsg = ChatMessage();
+    final userMsg = ChatMessage()..profileId = profileId;
     userMsg.sessionId = sessionId;
     userMsg.role = 'user';
     userMsg.content = trimmed;
@@ -281,12 +309,16 @@ ${line('本月', month)}
       final records = await ref.read(recordsProvider.future);
       final options = await ref.read(optionsProvider.future);
 
+      final activeProfile = ref.read(activeProfileProvider);
       final executor = AiToolExecutor(
         host: _ChatToolHost(ref),
+        // records 已按身份过滤（recordsProvider），AI 看不到别人的账
         records: records,
         options: options,
         // 本次带图提问：AI 新建记录时会把这张图关联上
         contextPhotoName: imageName,
+        profileId: activeProfile?.id ?? 0,
+        profileName: activeProfile?.name ?? '',
       );
       // ── 唯一配置来源：aiConfigProvider ──
       // 这里**绝不能**再手搓 AiConfig 对象去读 settings.aiBaseUrl/aiModel：
@@ -326,7 +358,9 @@ ${line('本月', month)}
                 tools: cur.tools,
               );
             },
-            dataDigest: _buildDigest(records, ref.read(unitConverterProvider)),
+            dataDigest: _digestWithProfile(
+              _buildDigest(records, ref.read(unitConverterProvider)),
+            ),
             isCancelled: () => _cancelRequested,
             onToolHint: (name, count) {
               final cur = ref.read(streamingProvider.notifier).state ??
@@ -346,7 +380,7 @@ ${line('本月', month)}
       if (_cancelRequested) {
         final partial = reply.text.trim();
         if (partial.isNotEmpty) {
-          final stopMsg = ChatMessage();
+          final stopMsg = ChatMessage()..profileId = profileId;
           stopMsg.sessionId = sessionId;
           stopMsg.role = 'assistant';
           stopMsg.content = '$partial\n\n（已停止）';
@@ -362,7 +396,7 @@ ${line('本月', month)}
       }
 
       // 4. 助手消息落库
-      final aiMsg = ChatMessage();
+      final aiMsg = ChatMessage()..profileId = profileId;
       aiMsg.sessionId = sessionId;
       aiMsg.role = 'assistant';
       aiMsg.content = reply.text;
@@ -434,6 +468,7 @@ ${line('本月', month)}
       // 其余确认卡片：各自一条消息，用户逐个点确认
       for (final extra in allActions.skip(1)) {
         final card = ChatMessage()
+          ..profileId = profileId
           ..sessionId = sessionId
           ..role = 'assistant'
           ..content = ''
@@ -625,6 +660,8 @@ ${line('本月', month)}
           var withPhoto = 0;
           for (final item in action.items) {
             final r = PieceRecord();
+            // 身份卡：优先用工具给的（AI 创建时已带上当前身份），否则用当前身份
+            r.profileId = (item['profileId'] as num?)?.toInt() ?? profileId;
             r.styleModel = (item['styleModel'] as String?) ?? '';
             r.color = (item['color'] as String?) ?? '';
             r.size = (item['size'] as String?) ?? '';
@@ -835,6 +872,7 @@ ${line('本月', month)}
   Future<void> persistActionCard(PendingAction action) async {
     final repo = ref.read(chatRepoProvider);
     final msg = ChatMessage();
+    msg.profileId = profileId;
     msg.sessionId = _sessionId;
     msg.role = 'assistant';
     msg.content = '';
@@ -896,11 +934,14 @@ Future<AiToolExecutor> buildChatToolExecutor(
   // 必须 await：valueOrNull 为 null 时会退化成「空库」，查询全部就变成 0 条
   final records = await ref.read(recordsProvider.future);
   final options = await ref.read(optionsProvider.future);
+  final activeProfile = ref.read(activeProfileProvider);
   return AiToolExecutor(
     host: _ChatToolHost(ref),
     records: records,
     options: options,
     contextPhotoName: contextPhotoName,
+    profileId: activeProfile?.id ?? 0,
+    profileName: activeProfile?.name ?? '',
   );
 }
 

@@ -7,6 +7,10 @@ part 'app_setting.g.dart';
 class AppSetting {
   Id id = Isar.autoIncrement;
 
+  // ── 身份卡 ─────────────────────────────────────────────
+  /// 当前选中的身份卡 id（0 = 还没初始化）
+  int activeProfileId = 0;
+
   // ── AI 配置 ─────────────────────────────────────────────
   /// **自定义提供商**的接口地址，兼容 OpenAI 协议，例如：
   ///   https://api.openai.com/v1

@@ -67,38 +67,43 @@ const ChatMessageSchema = CollectionSchema(
       name: r'numberWarning',
       type: IsarType.string,
     ),
-    r'promptTokens': PropertySchema(
+    r'profileId': PropertySchema(
       id: 10,
+      name: r'profileId',
+      type: IsarType.long,
+    ),
+    r'promptTokens': PropertySchema(
+      id: 11,
       name: r'promptTokens',
       type: IsarType.long,
     ),
     r'reasoning': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'reasoning',
       type: IsarType.string,
     ),
     r'role': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'role',
       type: IsarType.string,
     ),
     r'sessionId': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'sessionId',
       type: IsarType.long,
     ),
     r'statsJson': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'statsJson',
       type: IsarType.string,
     ),
     r'toolsJson': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'toolsJson',
       type: IsarType.string,
     ),
     r'totalTokens': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'totalTokens',
       type: IsarType.long,
     )
@@ -117,6 +122,19 @@ const ChatMessageSchema = CollectionSchema(
       properties: [
         IndexPropertySchema(
           name: r'sessionId',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
+    ),
+    r'profileId': IndexSchema(
+      id: 6052971939042612300,
+      name: r'profileId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'profileId',
           type: IndexType.value,
           caseSensitive: false,
         )
@@ -179,13 +197,14 @@ void _chatMessageSerialize(
   writer.writeString(offsets[7], object.imageName);
   writer.writeBool(offsets[8], object.isUser);
   writer.writeString(offsets[9], object.numberWarning);
-  writer.writeLong(offsets[10], object.promptTokens);
-  writer.writeString(offsets[11], object.reasoning);
-  writer.writeString(offsets[12], object.role);
-  writer.writeLong(offsets[13], object.sessionId);
-  writer.writeString(offsets[14], object.statsJson);
-  writer.writeString(offsets[15], object.toolsJson);
-  writer.writeLong(offsets[16], object.totalTokens);
+  writer.writeLong(offsets[10], object.profileId);
+  writer.writeLong(offsets[11], object.promptTokens);
+  writer.writeString(offsets[12], object.reasoning);
+  writer.writeString(offsets[13], object.role);
+  writer.writeLong(offsets[14], object.sessionId);
+  writer.writeString(offsets[15], object.statsJson);
+  writer.writeString(offsets[16], object.toolsJson);
+  writer.writeLong(offsets[17], object.totalTokens);
 }
 
 ChatMessage _chatMessageDeserialize(
@@ -205,13 +224,14 @@ ChatMessage _chatMessageDeserialize(
   object.id = id;
   object.imageName = reader.readString(offsets[7]);
   object.numberWarning = reader.readString(offsets[9]);
-  object.promptTokens = reader.readLong(offsets[10]);
-  object.reasoning = reader.readString(offsets[11]);
-  object.role = reader.readString(offsets[12]);
-  object.sessionId = reader.readLong(offsets[13]);
-  object.statsJson = reader.readString(offsets[14]);
-  object.toolsJson = reader.readString(offsets[15]);
-  object.totalTokens = reader.readLong(offsets[16]);
+  object.profileId = reader.readLong(offsets[10]);
+  object.promptTokens = reader.readLong(offsets[11]);
+  object.reasoning = reader.readString(offsets[12]);
+  object.role = reader.readString(offsets[13]);
+  object.sessionId = reader.readLong(offsets[14]);
+  object.statsJson = reader.readString(offsets[15]);
+  object.toolsJson = reader.readString(offsets[16]);
+  object.totalTokens = reader.readLong(offsets[17]);
   return object;
 }
 
@@ -245,16 +265,18 @@ P _chatMessageDeserializeProp<P>(
     case 10:
       return (reader.readLong(offset)) as P;
     case 11:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 12:
       return (reader.readString(offset)) as P;
     case 13:
-      return (reader.readLong(offset)) as P;
-    case 14:
       return (reader.readString(offset)) as P;
+    case 14:
+      return (reader.readLong(offset)) as P;
     case 15:
       return (reader.readString(offset)) as P;
     case 16:
+      return (reader.readString(offset)) as P;
+    case 17:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -286,6 +308,14 @@ extension ChatMessageQueryWhereSort
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         const IndexWhereClause.any(indexName: r'sessionId'),
+      );
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterWhere> anyProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'profileId'),
       );
     });
   }
@@ -453,6 +483,97 @@ extension ChatMessageQueryWhere
         lower: [lowerSessionId],
         includeLower: includeLower,
         upper: [upperSessionId],
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterWhereClause> profileIdEqualTo(
+      int profileId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'profileId',
+        value: [profileId],
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterWhereClause> profileIdNotEqualTo(
+      int profileId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [],
+              upper: [profileId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [profileId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [profileId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [],
+              upper: [profileId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterWhereClause>
+      profileIdGreaterThan(
+    int profileId, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'profileId',
+        lower: [profileId],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterWhereClause> profileIdLessThan(
+    int profileId, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'profileId',
+        lower: [],
+        upper: [profileId],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterWhereClause> profileIdBetween(
+    int lowerProfileId,
+    int upperProfileId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'profileId',
+        lower: [lowerProfileId],
+        includeLower: includeLower,
+        upper: [upperProfileId],
         includeUpper: includeUpper,
       ));
     });
@@ -1598,6 +1719,62 @@ extension ChatMessageQueryFilter
   }
 
   QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      profileIdEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'profileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      profileIdGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'profileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      profileIdLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'profileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      profileIdBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'profileId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
       promptTokensEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -2436,6 +2613,18 @@ extension ChatMessageQuerySortBy
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> sortByProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> sortByProfileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> sortByPromptTokens() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'promptTokens', Sort.asc);
@@ -2659,6 +2848,18 @@ extension ChatMessageQuerySortThenBy
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> thenByProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> thenByProfileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> thenByPromptTokens() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'promptTokens', Sort.asc);
@@ -2815,6 +3016,12 @@ extension ChatMessageQueryWhereDistinct
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QDistinct> distinctByProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'profileId');
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QDistinct> distinctByPromptTokens() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'promptTokens');
@@ -2927,6 +3134,12 @@ extension ChatMessageQueryProperty
   QueryBuilder<ChatMessage, String, QQueryOperations> numberWarningProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'numberWarning');
+    });
+  }
+
+  QueryBuilder<ChatMessage, int, QQueryOperations> profileIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'profileId');
     });
   }
 

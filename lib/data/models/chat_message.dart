@@ -14,6 +14,10 @@ class ChatMessage {
   @Index()
   late int sessionId;
 
+  /// 归属身份卡（不同身份的对话互不可见，避免上下文串味）
+  @Index()
+  int profileId = 0;
+
   /// 'user' | 'assistant'
   late String role;
 
