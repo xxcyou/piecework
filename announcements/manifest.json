@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2015,
-    "versionName": "1.1.4",
+    "versionCode": 2018,
+    "versionName": "1.1.7",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 修「下载完没反应」：优先走系统安装器，下载和安装分开两步，可重复点安装",
+    "notes": "· 修安装不弹：PackageInstaller 优先 + 处理「请确认安装」广播",
     "force": false
   }
 }

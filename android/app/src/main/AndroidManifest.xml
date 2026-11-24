@@ -50,6 +50,15 @@
         </activity>
 
         <!-- 应用内自动更新：把下载的 APK 通过 content:// 交给系统安装器 -->
+        <!-- PackageInstaller 的结果广播（含「请用户确认安装」） -->
+        <receiver
+            android:name=".InstallResultReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.piecework.INSTALL_RESULT" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

@@ -300,7 +300,7 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
     if (res.ok) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已调起系统安装器')),
+        SnackBar(content: Text('已调起安装器（${res.via}）')),
       );
       return;
     }
@@ -315,7 +315,7 @@ Future<void> runInAppUpdate(BuildContext context, RemoteRelease r) async {
         content: Text(
           needPerm
               ? '打开「安装未知应用」权限后再试。'
-              : '${res.message}\n\n安装包已下好，也可以重试或用浏览器重新下载。',
+              : '${res.message}\n\n安装包已下好，可以重试或用浏览器重新下载。',
           style: const TextStyle(fontSize: 12.5, height: 1.5),
         ),
         actions: <Widget>[

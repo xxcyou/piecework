@@ -75,22 +75,29 @@ class UpdateInstaller {
     }
   }
 
-  /// 调起系统安装器；返回 (成功?, 错误信息)
-  Future<({bool ok, String message})> install(String apkPath) async {
+  /// 调起系统安装器；返回 (成功?, 走哪条通道, 错误信息)
+  Future<({bool ok, String via, String message})> install(String apkPath) async {
     try {
-      final ok = await _ch.invokeMethod<bool>('installApk', <String, dynamic>{
+      final r = await _ch.invokeMethod<dynamic>('installApk', <String, dynamic>{
         'path': apkPath,
       });
-      return (ok: ok ?? false, message: '');
+      if (r is Map) {
+        return (
+          ok: r['ok'] == true,
+          via: '${r['via'] ?? ''}',
+          message: '${r['error'] ?? ''}',
+        );
+      }
+      return (ok: r == true, via: 'intent', message: '');
     } on PlatformException catch (e) {
-      return (ok: false, message: e.message ?? e.code);
+      return (ok: false, via: '', message: e.message ?? e.code);
     } catch (e) {
-      return (ok: false, message: '$e');
+      return (ok: false, via: '', message: '$e');
     }
   }
 
   /// 下载并安装（一步到位）
-  Future<({bool ok, String message})> downloadAndInstall(
+  Future<({bool ok, String via, String message})> downloadAndInstall(
     String apkUrl, {
     UpdateProgress? onProgress,
   }) async {

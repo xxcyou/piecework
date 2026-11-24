@@ -26,44 +26,34 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     private val channelName = "piecework/public_storage"
+
+    companion object {
+        const val ACTION_INSTALL_RESULT = "com.example.piecework.INSTALL_RESULT"
+    }
     private val requestPickFolder = 4711
     private var pendingPick: MethodChannel.Result? = null
 
     /**
-     * 安装下载好的 APK。
+     * 安装下载好的 APK，返回 {ok, via, error} 给 Dart 看。
      *
-     * 顺序是踩坑换来的：**先走 FileProvider + ACTION_VIEW**（系统安装器直接弹，
-     * 兼容性最好）；这条路被拦或抛异常，再退回 PackageInstaller。
-     * 以前反过来，某些 ROM 上 PackageInstaller 的 commit 静默失败，
-     * 表现就是「下载完了什么也没发生」。
+     * 三条路依次试，每一步都写 logcat（tag=piecework.install）：
+     * 1) FileProvider + ACTION_VIEW —— 系统安装器直接弹
+     * 2) PackageInstaller + 结果广播 —— 某些 ROM 不会自动弹安装界面，
+     *    必须收到 STATUS_PENDING_USER_ACTION 后自己 startActivity(EXTRA_INTENT)；
+     *    以前没接这个广播，表现就是「点了没反应」
+     * 3) 都失败 → 把真实异常回给 Dart
      */
     private fun installApk(path: String, result: MethodChannel.Result) {
         val file = java.io.File(path)
         if (path.isEmpty() || !file.exists()) {
-            result.error("missing", "安装包不存在", null)
+            result.success(mapOf("ok" to false, "via" to "none", "error" to "安装包不存在"))
             return
         }
+        android.util.Log.i("piecework.install", "start path=$path size=${file.length()}")
 
-        // 1) FileProvider + ACTION_VIEW
-        try {
-            val uri = androidx.core.content.FileProvider.getUriForFile(
-                this,
-                "$packageName.fileprovider",
-                file,
-            )
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(intent)
-            result.success(true)
-            return
-        } catch (e: Exception) {
-            // 落到 PackageInstaller
-        }
-
-        // 2) PackageInstaller
+        // 1) PackageInstaller 会话 —— 系统自己的安装流程，不依赖「谁被设成默认安装器」。
+        //    关键：结果广播里 STATUS_PENDING_USER_ACTION 要自己 startActivity（见下方 Receiver），
+        //    以前没接，表现就是「点了没反应」。
         try {
             val params = android.content.pm.PackageInstaller.SessionParams(
                 android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL,
@@ -77,7 +67,7 @@ class MainActivity : FlutterActivity() {
                         session.fsync(out)
                     }
                 }
-                val intent = android.content.Intent("$packageName.INSTALL_RESULT")
+                val intent = android.content.Intent(ACTION_INSTALL_RESULT)
                     .setPackage(packageName)
                 val flags = if (android.os.Build.VERSION.SDK_INT >= 31) {
                     android.app.PendingIntent.FLAG_UPDATE_CURRENT or
@@ -88,11 +78,44 @@ class MainActivity : FlutterActivity() {
                 val pi = android.app.PendingIntent.getBroadcast(this, sessionId, intent, flags)
                 session.commit(pi.intentSender)
             }
-            result.success(true)
-        } catch (e: SecurityException) {
-            result.error("need_permission", "需要允许安装未知应用", null)
+            android.util.Log.i("piecework.install", "PackageInstaller committed")
+            result.success(mapOf("ok" to true, "via" to "session", "error" to ""))
+            return
         } catch (e: Exception) {
-            result.error("install_failed", e.message ?: "安装失败", null)
+            android.util.Log.i("piecework.install", "PackageInstaller failed: ${e.message}")
+        }
+
+        // 2) 兜底：FileProvider + ACTION_VIEW
+        try {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                file,
+            )
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            val handlers = packageManager.queryIntentActivities(intent, 0)
+            android.util.Log.i("piecework.install", "ACTION_VIEW handlers=${handlers.size}")
+            if (handlers.isNotEmpty()) {
+                startActivity(intent)
+                result.success(mapOf("ok" to true, "via" to "intent", "error" to ""))
+                return
+            }
+            result.success(
+                mapOf("ok" to false, "via" to "intent", "error" to "没有安装器能处理这个安装包"),
+            )
+        } catch (e: Exception) {
+            android.util.Log.i("piecework.install", "ACTION_VIEW failed: ${e.message}")
+            result.success(
+                mapOf(
+                    "ok" to false,
+                    "via" to "intent",
+                    "error" to (e.message ?: e.javaClass.simpleName),
+                ),
+            )
         }
     }
 
@@ -346,5 +369,37 @@ class MainActivity : FlutterActivity() {
             contentResolver,
             DocumentsContract.buildDocumentUriUsingTree(uri, child.docId)
         )
+    }
+}
+
+/**
+ * 安装结果广播：必须处理 STATUS_PENDING_USER_ACTION —— 这时系统把「安装确认界面」
+ * 放在 EXTRA_INTENT 里，要我们自己 startActivity 才会弹出来。
+ */
+class InstallResultReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+        val status = intent.getIntExtra(
+            android.content.pm.PackageInstaller.EXTRA_STATUS,
+            android.content.pm.PackageInstaller.STATUS_FAILURE,
+        )
+        val msg = intent.getStringExtra(android.content.pm.PackageInstaller.EXTRA_STATUS_MESSAGE)
+        android.util.Log.i("piecework.install", "result status=$status msg=$msg")
+        when (status) {
+            android.content.pm.PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                @Suppress("DEPRECATION")
+                val confirm = intent.getParcelableExtra<android.content.Intent>(
+                    android.content.Intent.EXTRA_INTENT,
+                )
+                confirm?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (confirm != null) {
+                    try {
+                        context.startActivity(confirm)
+                        android.util.Log.i("piecework.install", "started confirm activity")
+                    } catch (e: Exception) {
+                        android.util.Log.i("piecework.install", "confirm failed: ${e.message}")
+                    }
+                }
+            }
+        }
     }
 }
