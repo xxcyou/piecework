@@ -10,6 +10,10 @@ part 'filter_preset.g.dart';
 class FilterPreset {
   Id id = Isar.autoIncrement;
 
+  /// 归属身份卡（0 = 早期未打标，归默认身份）
+  @Index()
+  int profileId = 0;
+
   /// 预设名称，例如「本周黑色M码」
   late String name;
 

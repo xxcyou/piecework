@@ -36,7 +36,12 @@ final recordsProvider = StreamProvider<List<PieceRecord>>((ref) {
 /// 当前筛选条件
 class FilterNotifier extends Notifier<RecordFilter> {
   @override
-  RecordFilter build() => RecordFilter.empty;
+  RecordFilter build() {
+    // 身份一变就清空筛选：条件（型号/颜色…）属于上一个身份的环境，
+    // 带过去只会筛出空列表
+    ref.watch(activeProfileIdProvider);
+    return RecordFilter.empty;
+  }
 
   void apply(RecordFilter filter) => state = filter;
 

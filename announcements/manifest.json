@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2038,
-    "versionName": "1.5.1",
+    "versionCode": 2039,
+    "versionName": "1.5.2",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· AI 会话按身份隔离：切换身份只显示该身份的对话",
+    "notes": "· 身份隔离补全：筛选预设、筛选条件、AI 会话与任务状态都按身份分开",
     "force": false
   }
 }

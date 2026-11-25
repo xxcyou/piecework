@@ -226,6 +226,11 @@ ${line('本月', month)}
 
   /// 切换身份卡：换到那个身份的会话（上下文不串）
   Future<void> switchProfileTo(int pid) async {
+    // 换环境：清掉上一个身份的续跑计数/任务残留
+    _autoResumeCount = 0;
+    _autoResumeGoal = '';
+    _lastDoneText = '';
+    _requestedSessionId = null;
     await switchProfile(ref, pid);
     final repo = ref.read(chatRepoProvider);
     final s = await repo.latestOrCreate(profileId: pid);

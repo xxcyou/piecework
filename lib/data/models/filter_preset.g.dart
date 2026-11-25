@@ -31,6 +31,11 @@ const FilterPresetSchema = CollectionSchema(
       id: 2,
       name: r'payload',
       type: IsarType.string,
+    ),
+    r'profileId': PropertySchema(
+      id: 3,
+      name: r'profileId',
+      type: IsarType.long,
     )
   },
   estimateSize: _filterPresetEstimateSize,
@@ -39,6 +44,19 @@ const FilterPresetSchema = CollectionSchema(
   deserializeProp: _filterPresetDeserializeProp,
   idName: r'id',
   indexes: {
+    r'profileId': IndexSchema(
+      id: 6052971939042612300,
+      name: r'profileId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'profileId',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
+    ),
     r'createdAt': IndexSchema(
       id: -3433535483987302584,
       name: r'createdAt',
@@ -81,6 +99,7 @@ void _filterPresetSerialize(
   writer.writeDateTime(offsets[0], object.createdAt);
   writer.writeString(offsets[1], object.name);
   writer.writeString(offsets[2], object.payload);
+  writer.writeLong(offsets[3], object.profileId);
 }
 
 FilterPreset _filterPresetDeserialize(
@@ -94,6 +113,7 @@ FilterPreset _filterPresetDeserialize(
   object.id = id;
   object.name = reader.readString(offsets[1]);
   object.payload = reader.readString(offsets[2]);
+  object.profileId = reader.readLong(offsets[3]);
   return object;
 }
 
@@ -110,6 +130,8 @@ P _filterPresetDeserializeProp<P>(
       return (reader.readString(offset)) as P;
     case 2:
       return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -133,6 +155,14 @@ extension FilterPresetQueryWhereSort
   QueryBuilder<FilterPreset, FilterPreset, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterWhere> anyProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'profileId'),
+      );
     });
   }
 
@@ -209,6 +239,97 @@ extension FilterPresetQueryWhere
         lower: lowerId,
         includeLower: includeLower,
         upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterWhereClause> profileIdEqualTo(
+      int profileId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'profileId',
+        value: [profileId],
+      ));
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterWhereClause>
+      profileIdNotEqualTo(int profileId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [],
+              upper: [profileId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [profileId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [profileId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'profileId',
+              lower: [],
+              upper: [profileId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterWhereClause>
+      profileIdGreaterThan(
+    int profileId, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'profileId',
+        lower: [profileId],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterWhereClause> profileIdLessThan(
+    int profileId, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'profileId',
+        lower: [],
+        upper: [profileId],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterWhereClause> profileIdBetween(
+    int lowerProfileId,
+    int upperProfileId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'profileId',
+        lower: [lowerProfileId],
+        includeLower: includeLower,
+        upper: [upperProfileId],
         includeUpper: includeUpper,
       ));
     });
@@ -686,6 +807,62 @@ extension FilterPresetQueryFilter
       ));
     });
   }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterFilterCondition>
+      profileIdEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'profileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterFilterCondition>
+      profileIdGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'profileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterFilterCondition>
+      profileIdLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'profileId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterFilterCondition>
+      profileIdBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'profileId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
 }
 
 extension FilterPresetQueryObject
@@ -729,6 +906,18 @@ extension FilterPresetQuerySortBy
   QueryBuilder<FilterPreset, FilterPreset, QAfterSortBy> sortByPayloadDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'payload', Sort.desc);
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterSortBy> sortByProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterSortBy> sortByProfileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.desc);
     });
   }
 }
@@ -782,6 +971,18 @@ extension FilterPresetQuerySortThenBy
       return query.addSortBy(r'payload', Sort.desc);
     });
   }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterSortBy> thenByProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QAfterSortBy> thenByProfileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'profileId', Sort.desc);
+    });
+  }
 }
 
 extension FilterPresetQueryWhereDistinct
@@ -803,6 +1004,12 @@ extension FilterPresetQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'payload', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<FilterPreset, FilterPreset, QDistinct> distinctByProfileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'profileId');
     });
   }
 }
@@ -830,6 +1037,12 @@ extension FilterPresetQueryProperty
   QueryBuilder<FilterPreset, String, QQueryOperations> payloadProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'payload');
+    });
+  }
+
+  QueryBuilder<FilterPreset, int, QQueryOperations> profileIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'profileId');
     });
   }
 }
