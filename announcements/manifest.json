@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2032,
-    "versionName": "1.4.5",
+    "versionCode": 2033,
+    "versionName": "1.4.6",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 修复：复制/新建记录保存后列表里看不到（身份标签没打上）",
+    "notes": "· 修复切换对话不生效（切换以你点的为准）",
     "force": false
   }
 }

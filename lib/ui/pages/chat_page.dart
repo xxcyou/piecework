@@ -123,8 +123,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         const Spacer(),
                         FilledButton.tonalIcon(
                           onPressed: () async {
+                            // 先拿 notifier 再关面板：pop 之后这个 Consumer 的
+                            // ref 就失效了，read 会抛异常 → 看起来「点了没反应」
+                            final notifier = ref2.read(chatProvider.notifier);
                             Navigator.of(ctx).pop();
-                            await ref2.read(chatProvider.notifier).newSession();
+                            await notifier.newSession();
                           },
                           icon: const Icon(Icons.add, size: 16),
                           label: const Text('新对话'),
@@ -187,10 +190,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                       Navigator.of(ctx).pop();
                                       await _renameSession(context, ref2, s);
                                     } else if (v == 'delete') {
+                                      final notifier =
+                                          ref2.read(chatProvider.notifier);
                                       Navigator.of(ctx).pop();
-                                      await ref2
-                                          .read(chatProvider.notifier)
-                                          .deleteSession(s.id);
+                                      await notifier.deleteSession(s.id);
                                     }
                                   },
                                   itemBuilder: (_) =>
@@ -206,10 +209,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                   ],
                                 ),
                                 onTap: () {
+                                  // 同上：先取 notifier，再关面板
+                                  final notifier =
+                                      ref2.read(chatProvider.notifier);
                                   Navigator.of(ctx).pop();
-                                  ref2
-                                      .read(chatProvider.notifier)
-                                      .switchTo(s.id);
+                                  notifier.switchTo(s.id);
                                 },
                               );
                             },

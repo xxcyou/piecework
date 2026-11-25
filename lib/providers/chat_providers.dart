@@ -106,6 +106,13 @@ class ChatNotifier extends AsyncNotifier<List<ChatMessage>> {
   /// 当前会话 id（切换会话时更新）
   int _sessionId = 1;
 
+  /// 用户刚点选、正在切换过去的会话 id。
+  ///
+  /// 为什么需要它：切换会顺手改设置，而设置一变 [build] 会重跑；
+  /// 如果重跑时设置的写入还没落地，就会把 state 又拉回旧会话 ——
+  /// 表现就是「点了另一个对话，还是原来那段」。这里以用户点选为准。
+  int? _requestedSessionId;
+
   /// 当前身份卡 id（所有会话/消息都按它隔离）
   int get profileId => ref.read(activeProfileIdProvider);
 
@@ -189,7 +196,8 @@ ${line('本月', month)}
     final repo = ref.watch(chatRepoProvider);
 
     final pid = profileId;
-    var existing = await repo.sessionById(settings.chatSessionId);
+    final wanted = _requestedSessionId ?? settings.chatSessionId;
+    var existing = await repo.sessionById(wanted);
     // 会话必须属于当前身份，否则换身份后不该看到别人的对话
     if (existing != null && pid != 0 && existing.profileId != pid) {
       existing = null;
@@ -206,18 +214,22 @@ ${line('本月', month)}
     await switchProfile(ref, pid);
     final repo = ref.read(chatRepoProvider);
     final s = await repo.latestOrCreate(profileId: pid);
+    _requestedSessionId = s.id;
     _sessionId = s.id;
-    await ref.read(settingsProvider.notifier).mutate((x) => x.chatSessionId = s.id);
     state = AsyncData(await repo.session(s.id));
     ref.invalidate(sessionsProvider);
+    await ref.read(settingsProvider.notifier).mutate((x) => x.chatSessionId = s.id);
   }
 
   Future<void> switchTo(int id) async {
     final repo = ref.read(chatRepoProvider);
+    // 先立刻切过去（UI 马上变），再落设置
+    _requestedSessionId = id;
     _sessionId = id;
-    await ref.read(settingsProvider.notifier).mutate((s) => s.chatSessionId = id);
+    _cancelRequested = false;
     state = AsyncData(await repo.session(id));
     ref.invalidate(sessionsProvider);
+    await ref.read(settingsProvider.notifier).mutate((s) => s.chatSessionId = id);
   }
 
   Future<void> newSession() async {
