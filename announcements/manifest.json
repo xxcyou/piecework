@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2031,
-    "versionName": "1.4.4",
+    "versionCode": 2032,
+    "versionName": "1.4.5",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 强制自动备份（免设置）：加密存到「下载/Piecework」，卸载重装可恢复\n· AI 算数强制走计算器，回答末尾附「计算器核对」",
+    "notes": "· 修复：复制/新建记录保存后列表里看不到（身份标签没打上）",
     "force": false
   }
 }

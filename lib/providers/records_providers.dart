@@ -16,10 +16,17 @@ import 'units_providers.dart';
 /// 列表/报表/AI 都吃这一份数据，天然不会串账。
 final recordsProvider = StreamProvider<List<PieceRecord>>((ref) {
   final profileId = ref.watch(activeProfileIdProvider);
-  return ref
-      .watch(recordRepoProvider)
-      .watchAll(profileId: profileId == 0 ? null : profileId)
-      .map((list) {
+  final activeIsDefault = ref.watch(activeProfileProvider)?.isDefault ?? false;
+  return ref.watch(recordRepoProvider).watchAll().map((all) {
+    // 按身份过滤；profileId==0 的历史记录归到「默认身份」，
+    // 否则用户新建/复制保存后看不到那条记录（以为没保存）
+    final list = profileId == 0
+        ? all
+        : all
+            .where((r) =>
+                r.profileId == profileId ||
+                (r.profileId == 0 && activeIsDefault))
+            .toList();
     // 数据一变就排一次自动备份（内部防抖 25 秒）
     AutoBackupService.instance.schedule();
     return list;

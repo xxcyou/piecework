@@ -10,6 +10,7 @@ import '../../data/models/piece_record.dart';
 import '../../data/services/photo_service.dart';
 import '../../data/services/record_codec.dart';
 import '../../providers/db_providers.dart';
+import '../../providers/profile_providers.dart';
 import '../../providers/options_providers.dart';
 import '../../providers/photo_library_providers.dart';
 import '../../providers/settings_providers.dart';
@@ -244,7 +245,12 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
           ? null
           : RecordCodec.fromJson(RecordCodec.toJson(_existing!));
 
+      // 新建（含「复制」）必须打到当前身份卡上，
+      // 否则 profileId 会是 0 → 被身份过滤掉，列表里看不到（看起来像没保存）
       final record = _existing ?? PieceRecord();
+      if (_existing == null) {
+        record.profileId = ref.read(activeProfileIdProvider);
+      }
       record.styleModel = style;
       record.color = color;
       record.size = size;
