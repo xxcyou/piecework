@@ -289,6 +289,20 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
                             fontSize: 13, fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          '免费模型偶尔会中途断流（复杂任务更明显），'
+                          'App 会自动接着跑；想一次做完建议用自定义的收费模型。',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            height: 1.5,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                        ),
+                      ),
                       SegmentedButton<String>(
                         segments: <ButtonSegment<String>>[
                           ButtonSegment<String>(

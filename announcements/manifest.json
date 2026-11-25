@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2035,
-    "versionName": "1.4.8",
+    "versionCode": 2037,
+    "versionName": "1.5.0",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 提问改成弹窗：回答完才继续\n· 新建/修改/删除改成弹窗确认，确认后计划自动往下走\n· 支持多张确认卡片，逐个确认也能走到完成",
+    "notes": "· 顶部常驻计划进度：第几步/共几步 + 进度条\n· 简单任务不再建计划\n· 免费模型断流自动重试、计划自动续跑",
     "force": false
   }
 }

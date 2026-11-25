@@ -115,6 +115,12 @@ class ChatNotifier extends AsyncNotifier<List<ChatMessage>> {
 
   /// 自动续跑计数（防止计划卡死时无限循环）
   int _autoResumeCount = 0;
+
+  /// confirmPending 执行完的说明，等 busy 释放后再用它续跑
+  String _lastDoneText = '';
+
+  /// 失败自动重试次数（防止死循环）
+  int _autoRetry = 0;
   String _autoResumeGoal = '';
 
   /// 当前身份卡 id（所有会话/消息都按它隔离）
@@ -514,13 +520,52 @@ ${line('本月', month)}
       // 后台压缩长会话（不阻塞界面）
       unawaited(_maybeCompact());
     } on AiException catch (e) {
+      // 免费模型经常超时/断流：自动重试一次，别让用户自己再打一遍
+      if (!_cancelRequested && _autoRetry < 1) {
+        _autoRetry++;
+        await Future<void>.delayed(const Duration(seconds: 2));
+        if (!_cancelRequested) {
+          _autoRetry--;
+          unawaited(send(
+            text: userText,
+            imageBytes: imageBytes,
+            imageName: imageName,
+          ));
+          return;
+        }
+      }
       await _markFailed(userMsg, e.message);
     } catch (e) {
       await _markFailed(userMsg, '出错了：$e');
     } finally {
       ref.read(chatBusyProvider.notifier).state = false;
       ref.read(streamingProvider.notifier).state = null;
+      // 计划还没做完（模型这轮只做了一步）→ 自动接着做下一步
+      if (!_cancelRequested) {
+        unawaited(_continueTaskIfNeeded());
+      }
     }
+  }
+
+  /// 这轮结束后如果 agent 计划还没完成，自动推它继续
+  ///
+  /// 用户要的是「计划能自己走完」：模型经常做完第一步就停下来输出一段话，
+  /// 这里补一脚，让它继续执行剩余步骤直到 finish_task。
+  Future<void> _continueTaskIfNeeded() async {
+    final task = _activeAgentTask();
+    if (task == null) return;
+    if (ref.read(chatBusyProvider)) return;
+    // 还在等用户拍板（有未确认的写操作 / 有没答的提问）就别催，
+    // 否则模型会重复发卡片
+    final list = state.valueOrNull ?? const <ChatMessage>[];
+    for (final m in list.reversed) {
+      if (m.role != 'assistant') continue;
+      if (m.actionJson.isNotEmpty) return;
+      final raw = _tryDecode(m.toolsJson);
+      if (raw is Map && AskPrompt.fromJson(raw['ask']) != null) return;
+      break;
+    }
+    await _resumeAgentIfNeeded('上一步已完成');
   }
 
   /// 发送失败：给那条用户消息打上红色感叹号，并保留原因供查看/重试
@@ -613,9 +658,14 @@ ${line('本月', month)}
       _autoResumeCount = 0;
     }
     _autoResumeCount++;
-    // 等一下让卡片状态先落地，再续跑
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // 等 busy 释放：确认/回答动作本身还在跑时 send() 会直接 return（这是之前
+    // 「确认完就没下文」的根因），所以这里轮询等它变空闲
+    for (var i = 0; i < 40; i++) {
+      if (!ref.read(chatBusyProvider)) break;
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
     if (ref.read(chatBusyProvider)) return;
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     await send(
       text: '（已确认：$justDone。请继续按计划执行下一步；'
           '全部步骤做完就调用 finish_task 总结，不要再问我确认。）',
@@ -811,12 +861,17 @@ ${line('本月', month)}
       }
 
       await _finishAction(msg, '✅ $done');
-      // 还有没做完的 agent 计划 → 自动继续（多卡片逐个确认也能走完）
-      unawaited(_resumeAgentIfNeeded(done));
+      _lastDoneText = done;
     } catch (e) {
       ref.read(chatErrorProvider.notifier).state = '执行失败：$e';
     } finally {
       ref.read(chatBusyProvider.notifier).state = false;
+      // busy 已经放开，这时续跑才不会被 send() 拦掉
+      final done = _lastDoneText;
+      _lastDoneText = '';
+      if (done.isNotEmpty) {
+        unawaited(_resumeAgentIfNeeded(done));
+      }
     }
   }
 

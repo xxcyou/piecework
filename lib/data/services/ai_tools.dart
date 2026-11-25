@@ -3837,6 +3837,17 @@ class AiToolExecutor {
       );
     }
 
+    // 简单任务不该建计划：一步就能做完的事直接做，别让用户等进度条
+    if (steps.length < 2) {
+      return ToolOutcome(
+        json: <String, dynamic>{
+          'ok': false,
+          'error': '这属于简单任务（一步就能做完），不要制定计划：'
+              '直接调用需要的工具、然后把结果告诉用户。',
+        },
+      );
+    }
+
     _task = AgentTask(
       goal: goal.isEmpty ? '执行任务' : goal,
       steps: steps,

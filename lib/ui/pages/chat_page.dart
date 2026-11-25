@@ -88,6 +88,76 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   // ───────────────────────── 会话管理 ─────────────────────────
 
+  /// 最近一条「还没做完」的计划（有就在顶部显示进度）
+  AgentTask? _activeTask(List<ChatMessage> messages) {
+    for (final m in messages.reversed) {
+      if (m.role != 'assistant') continue;
+      Map<String, dynamic>? raw;
+      try {
+        final v = m.toolsJson.isEmpty ? null : jsonDecode(m.toolsJson);
+        if (v is Map) raw = v.map((k, val) => MapEntry('$k', val));
+      } catch (_) {}
+      final t = AgentTask.fromJson(raw?['task']);
+      if (t != null) return t.done ? null : t;
+    }
+    return null;
+  }
+
+  /// 顶部计划进度：做几步 / 共几步 / 当前在做什么
+  Widget _buildPlanProgress(ColorScheme scheme, AgentTask task) {
+    final running = task.running;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 2),
+      padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+      decoration: BoxDecoration(
+        color: scheme.primary.withAlpha(12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.primary.withAlpha(45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.auto_awesome_motion,
+                  size: 14, color: scheme.primary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  running?.title.isNotEmpty == true
+                      ? '正在做：${running!.title}'
+                      : task.goal,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 11.5, fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text(
+                '${task.doneCount}/${task.steps.length} 步',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: task.progress,
+              minHeight: 4,
+              backgroundColor: scheme.primary.withAlpha(30),
+              valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// AI 需要用户决定时弹窗：提问 / 确认新建、修改、删除
   ///
   /// 以前是聊天里的一张卡片，用户不点就卡住；现在弹出来，
@@ -95,15 +165,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> _maybeAgentDialog(List<ChatMessage> messages) async {
     if (!mounted || _dialogBusy) return;
     if (messages.isEmpty) return;
-    final last = messages.last;
-    if (last.role != 'assistant') return;
-    if (_dialogShown.contains(last.id)) return;
 
+    // 从后往前找：最近一条「还没处理过」的、需要用户拍板的 AI 消息
+    ChatMessage? last;
     Map<String, dynamic>? raw;
-    try {
-      final decoded = last.toolsJson.isEmpty ? null : jsonDecode(last.toolsJson);
-      if (decoded is Map) raw = decoded.map((k, v) => MapEntry('$k', v));
-    } catch (_) {}
+    for (final m in messages.reversed) {
+      if (m.role != 'assistant') continue;
+      if (_dialogShown.contains(m.id)) continue;
+      Map<String, dynamic>? decoded;
+      try {
+        final v = m.toolsJson.isEmpty ? null : jsonDecode(m.toolsJson);
+        if (v is Map) decoded = v.map((k, val) => MapEntry('$k', val));
+      } catch (_) {}
+      final hasAsk = AskPrompt.fromJson(decoded?['ask']) != null;
+      final hasAction = m.actionJson.isNotEmpty;
+      if (hasAsk || hasAction) {
+        last = m;
+        raw = decoded;
+        break;
+      }
+    }
+    if (last == null) return;
 
     // ① 反问：必须回答完才继续
     final ask = AskPrompt.fromJson(raw?['ask']);
@@ -559,6 +641,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     final messages = async.valueOrNull ?? const <ChatMessage>[];
 
+    final activeTask = _activeTask(messages);
+
     // 需要用户拍板时**弹窗**，弹完才继续（提问 / 确认写操作）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _maybeAgentDialog(messages);
@@ -656,6 +740,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             absorbing: !activated,
             child: Column(
         children: <Widget>[
+          if (activeTask != null) _buildPlanProgress(scheme, activeTask),
           if (!config.isConfigured) _buildConfigHint(scheme),
           Expanded(
             child: async.when(
