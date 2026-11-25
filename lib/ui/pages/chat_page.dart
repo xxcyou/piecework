@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,9 +9,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/format.dart';
 import '../../core/money.dart';
 import '../../data/models/chat_message.dart';
+import '../../data/models/pending_action.dart';
 import '../../data/models/chat_session.dart';
 import '../../data/services/photo_service.dart';
 import '../../providers/chat_providers.dart';
+import '../../data/services/ai_tool_types.dart';
 import '../../providers/license_providers.dart';
 import '../../providers/terminal_providers.dart';
 import '../../providers/settings_providers.dart';
@@ -40,6 +43,11 @@ class ChatPage extends ConsumerStatefulWidget {
 }
 
 class _ChatPageState extends ConsumerState<ChatPage> {
+  /// 已经弹过的消息（避免同一条反复弹窗）
+  final Set<int> _dialogShown = <int>{};
+
+  /// 当前是否有弹窗在路上
+  bool _dialogBusy = false;
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focusNode = FocusNode();
@@ -79,6 +87,120 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   // ───────────────────────── 会话管理 ─────────────────────────
+
+  /// AI 需要用户决定时弹窗：提问 / 确认新建、修改、删除
+  ///
+  /// 以前是聊天里的一张卡片，用户不点就卡住；现在弹出来，
+  /// 回答/确认之后 agent 自动接着走下一步。
+  Future<void> _maybeAgentDialog(List<ChatMessage> messages) async {
+    if (!mounted || _dialogBusy) return;
+    if (messages.isEmpty) return;
+    final last = messages.last;
+    if (last.role != 'assistant') return;
+    if (_dialogShown.contains(last.id)) return;
+
+    Map<String, dynamic>? raw;
+    try {
+      final decoded = last.toolsJson.isEmpty ? null : jsonDecode(last.toolsJson);
+      if (decoded is Map) raw = decoded.map((k, v) => MapEntry('$k', v));
+    } catch (_) {}
+
+    // ① 反问：必须回答完才继续
+    final ask = AskPrompt.fromJson(raw?['ask']);
+    if (ask != null) {
+      _dialogBusy = true;
+      _dialogShown.add(last.id);
+      final answer = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: Text(ask.question, style: const TextStyle(fontSize: 15)),
+          content: ask.why.isEmpty
+              ? null
+              : Text(ask.why,
+                  style: const TextStyle(fontSize: 12, height: 1.5)),
+          actions: <Widget>[
+            for (final opt in ask.options)
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(opt),
+                child: Text(opt, style: const TextStyle(fontSize: 13)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(skipAskText),
+              child: const Text('跳过', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+      _dialogBusy = false;
+      if (answer != null && answer.isNotEmpty) {
+        await ref.read(chatProvider.notifier).send(text: answer);
+      }
+      return;
+    }
+
+    // ② 写操作确认：确认完 agent 会自动续跑（见 _resumeAgentIfNeeded）
+    if (last.actionJson.isEmpty) return;
+    final action = PendingAction.fromJson(_decodeJson(last.actionJson));
+    if (action == null || action.isEmpty) return;
+
+    _dialogBusy = true;
+    _dialogShown.add(last.id);
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('需要你确认', style: TextStyle(fontSize: 15)),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(action.description,
+                    style: const TextStyle(fontSize: 13, height: 1.5)),
+                if (action.preview.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 8),
+                  for (final line in action.preview.take(8))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text('· $line',
+                          style: const TextStyle(fontSize: 11.5)),
+                    ),
+                  if (action.preview.length > 8)
+                    Text('…共 ${action.preview.length} 条',
+                        style: const TextStyle(fontSize: 11)),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('确认'),
+          ),
+        ],
+      ),
+    );
+    _dialogBusy = false;
+    if (ok == true) {
+      await ref.read(chatProvider.notifier).confirmPending(last);
+    }
+  }
+
+  Map<String, dynamic>? _decodeJson(String text) {
+    try {
+      final v = jsonDecode(text);
+      if (v is Map) return v.map((k, val) => MapEntry('$k', val));
+    } catch (_) {}
+    return null;
+  }
 
   void _showSessions(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
@@ -436,6 +558,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     final messages = async.valueOrNull ?? const <ChatMessage>[];
+
+    // 需要用户拍板时**弹窗**，弹完才继续（提问 / 确认写操作）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeAgentDialog(messages);
+    });
 
     return Scaffold(
       appBar: AppBar(

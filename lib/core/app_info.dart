@@ -6,7 +6,7 @@
 library;
 
 /// 版本名（给人看的）
-const String kAppVersionName = '1.4.6';
+const String kAppVersionName = '1.4.8';
 
 /// 版本号（给机器比的，必须单调递增）
 ///
@@ -14,7 +14,7 @@ const String kAppVersionName = '1.4.6';
 /// （armeabi-v7a +1000、arm64-v8a +2000、x86_64 +4000），所以手机里实际装上的
 /// versionCode 是 4001（arm64）。公告清单里的 versionCode 也用**基础号**比较，
 /// 这样无论用户装的是哪个 ABI 都能正确判断「有没有新版本」。
-const int kAppVersionCode = 2033;
+const int kAppVersionCode = 2035;
 
 /// 仓库（公告与更新清单都从这里取）
 const String kRepoOwner = 'xxcyou';

@@ -334,6 +334,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
 
               _sectionTitle('数据', scheme),
+              const DeviceBackupCard(),
               const BackupPanel(),
               const SizedBox(height: 8),
               _tile(

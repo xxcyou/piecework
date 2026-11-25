@@ -113,6 +113,10 @@ class ChatNotifier extends AsyncNotifier<List<ChatMessage>> {
   /// 表现就是「点了另一个对话，还是原来那段」。这里以用户点选为准。
   int? _requestedSessionId;
 
+  /// 自动续跑计数（防止计划卡死时无限循环）
+  int _autoResumeCount = 0;
+  String _autoResumeGoal = '';
+
   /// 当前身份卡 id（所有会话/消息都按它隔离）
   int get profileId => ref.read(activeProfileIdProvider);
 
@@ -583,6 +587,41 @@ ${line('本月', month)}
   }
 
   /// 用户点了「确认执行」：这时才真正写库
+  /// 找最近一条「还没完成」的 agent 任务
+  AgentTask? _activeAgentTask() {
+    final list = state.valueOrNull ?? const <ChatMessage>[];
+    for (final m in list.reversed) {
+      if (m.role != 'assistant') continue;
+      final raw = _tryDecode(m.toolsJson);
+      if (raw is! Map) continue;
+      final task = AgentTask.fromJson(raw['task']);
+      if (task != null && !task.done) return task;
+    }
+    return null;
+  }
+
+  /// 确认完一张卡片后：如果还有没做完的 agent 计划，自动接着跑
+  ///
+  /// 用户明确要求「确认后要能自己走完」，所以这里主动发一条续跑指令；
+  /// 用计数 + 目标去重，避免模型原地打转。
+  Future<void> _resumeAgentIfNeeded(String justDone) async {
+    final task = _activeAgentTask();
+    if (task == null) return;
+    if (_autoResumeCount >= 6) return;
+    if (_autoResumeGoal != task.goal) {
+      _autoResumeGoal = task.goal;
+      _autoResumeCount = 0;
+    }
+    _autoResumeCount++;
+    // 等一下让卡片状态先落地，再续跑
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (ref.read(chatBusyProvider)) return;
+    await send(
+      text: '（已确认：$justDone。请继续按计划执行下一步；'
+          '全部步骤做完就调用 finish_task 总结，不要再问我确认。）',
+    );
+  }
+
   Future<void> confirmPending(ChatMessage msg) async {
     if (ref.read(chatBusyProvider)) return;
 
@@ -772,6 +811,8 @@ ${line('本月', month)}
       }
 
       await _finishAction(msg, '✅ $done');
+      // 还有没做完的 agent 计划 → 自动继续（多卡片逐个确认也能走完）
+      unawaited(_resumeAgentIfNeeded(done));
     } catch (e) {
       ref.read(chatErrorProvider.notifier).state = '执行失败：$e';
     } finally {
