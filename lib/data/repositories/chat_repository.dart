@@ -111,3 +111,21 @@ class ChatRepository {
     });
   }
 }
+
+/// 会话按身份过滤（纯函数，便于测试）
+///
+/// 规则：
+/// * profileId 一致 → 显示
+/// * profileId == 0（早期版本没打标的会话）→ 只有「默认身份」能看到，
+///   否则换身份后会把别人的对话显示出来
+List<ChatSession> filterSessionsForProfile(
+  List<ChatSession> all,
+  int profileId, {
+  required bool activeIsDefault,
+}) {
+  if (profileId == 0) return all;
+  return all
+      .where((s) =>
+          s.profileId == profileId || (s.profileId == 0 && activeIsDefault))
+      .toList();
+}

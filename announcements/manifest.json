@@ -11,10 +11,10 @@
   "operatingMessage": "",
   "publicNotice": null,
   "latest": {
-    "versionCode": 2037,
-    "versionName": "1.5.0",
+    "versionCode": 2038,
+    "versionName": "1.5.1",
     "apkUrl": "https://github.com/xxcyou/piecework/releases/latest/download/piecework-release.apk",
-    "notes": "· 顶部常驻计划进度：第几步/共几步 + 进度条\n· 简单任务不再建计划\n· 免费模型断流自动重试、计划自动续跑",
+    "notes": "· AI 会话按身份隔离：切换身份只显示该身份的对话",
     "force": false
   }
 }

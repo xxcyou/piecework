@@ -7,6 +7,7 @@ import 'package:isar_community/isar.dart';
 
 import '../data/models/app_setting.dart';
 import '../data/models/chat_message.dart';
+import '../data/repositories/chat_repository.dart';
 import '../data/models/chat_session.dart';
 import '../data/models/option_item.dart';
 import '../data/models/pending_action.dart';
@@ -208,9 +209,13 @@ ${line('本月', month)}
     final pid = profileId;
     final wanted = _requestedSessionId ?? settings.chatSessionId;
     var existing = await repo.sessionById(wanted);
-    // 会话必须属于当前身份，否则换身份后不该看到别人的对话
-    if (existing != null && pid != 0 && existing.profileId != pid) {
-      existing = null;
+    // 会话必须属于当前身份（profileId==0 的老会话算默认身份的），
+    // 否则换身份后会把别人的对话显示出来
+    if (existing != null && pid != 0) {
+      final activeIsDefault = ref.read(activeProfileProvider)?.isDefault ?? false;
+      final ok = existing.profileId == pid ||
+          (existing.profileId == 0 && activeIsDefault);
+      if (!ok) existing = null;
     }
     final s = existing ?? await repo.latestOrCreate(profileId: pid);
     _sessionId = s.id;
@@ -1240,10 +1245,19 @@ class _ChatToolHost implements AiToolHost {
 /// 会话列表（按最近更新倒序）
 class SessionsNotifier extends AsyncNotifier<List<ChatSession>> {
   @override
-  Future<List<ChatSession>> build() => ref.watch(chatRepoProvider).sessions();
+  Future<List<ChatSession>> build() async {
+    final pid = ref.watch(activeProfileIdProvider);
+    final all = await ref.watch(chatRepoProvider).sessions();
+    // 只显示当前身份的会话；profileId==0 的历史会话归到默认身份
+    return filterSessionsForProfile(
+      all,
+      pid,
+      activeIsDefault: ref.watch(activeProfileProvider)?.isDefault ?? false,
+    );
+  }
 
   Future<void> refresh() async {
-    state = AsyncData(await ref.read(chatRepoProvider).sessions());
+    ref.invalidateSelf();
   }
 }
 
